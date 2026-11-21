@@ -1,0 +1,250 @@
+/* Mock-up kit: the page around the stage, in the game's own palette (style.css :root).
+   Layout: a header, a control bar of pickers, one or more 1:1 stages, notes beside the
+   copy-for-the-chat box, then compare sliders and stills. Dark only, like the game. */
+:root {
+  color-scheme: dark;
+  --k-page: #07060f; --k-panel: #120d1f; --k-panel2: #1a1230; --k-line: #33284f; --k-line2: #4c3a78;
+  --k-ink: #e2d9ff; --k-dim: rgba(196, 180, 240, .68); --k-chrome: #b070ff; --k-gold: #ffc964;
+  --k-green: #7dffb8; --k-cyan: #3ee0ff; --k-ember: #ff7a5c;
+  --k-ui: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --k-data: "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--k-page); color: var(--k-ink); font: 14px/1.5 var(--k-ui); }
+
+.page {
+  max-width: 1480px; margin: 0 auto; display: grid; gap: 18px;
+  padding-block: 22px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page > * { min-width: 0; }
+.page h1 { margin: 0; font: 700 22px/1.2 var(--k-ui); letter-spacing: 4px; color: #fff; text-wrap: balance; }
+.page h1 small { display: block; margin-top: 6px; font: 600 11px var(--k-data); letter-spacing: 2px; color: var(--k-dim); }
+.page h2 { margin: 6px 0 0; font: 600 13px var(--k-data); letter-spacing: 2.5px; color: var(--k-gold); text-wrap: balance; }
+.lede { margin: 0; max-width: 82ch; color: #d5cdf0; }
+kbd { font: 600 11px var(--k-data); border: 1px solid var(--k-line2); border-radius: 3px; padding: 0 5px; color: var(--k-ink); }
+.ic { font-family: "Font Awesome 7 Pro"; font-style: normal; font-weight: 400; line-height: 1; }
+
+/* ---- pickers */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 12px 26px; align-items: flex-start;
+  padding: 12px 14px; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: 8px;
+}
+.controls.sticky { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+.ctl { display: grid; gap: 6px; min-width: 0; }
+.ctl > span { font: 600 10px var(--k-data); letter-spacing: 2px; color: var(--k-dim); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button, .tog, .kbtn {
+  font: 600 12px var(--k-ui); letter-spacing: .5px; color: var(--k-ink); cursor: pointer;
+  background: var(--k-panel2); border: 1px solid var(--k-line2); border-radius: 5px; padding: 7px 12px;
+}
+.seg button:hover, .tog:hover, .kbtn:hover { border-color: var(--k-chrome); background: #241840; }
+.seg button[aria-pressed="true"] {
+  color: #fff3da; border-color: var(--k-gold); background: rgba(255, 201, 100, .16); box-shadow: inset 0 -2px 0 var(--k-gold);
+}
+.tog::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border: 1px solid var(--k-dim); border-radius: 2px; vertical-align: 0; }
+.tog[aria-pressed="true"] { color: #e2ffee; border-color: var(--k-green); }
+.tog[aria-pressed="true"]::before { background: var(--k-green); border-color: var(--k-green); box-shadow: 0 0 6px var(--k-green); }
+.kbtn.gold { color: #fff3da; border-color: rgba(255, 201, 100, .55); background: rgba(255, 201, 100, .1); }
+.seg button:focus-visible, .tog:focus-visible, .kbtn:focus-visible, .page textarea:focus-visible, .compare input:focus-visible {
+  outline: 2px solid var(--k-gold); outline-offset: 2px;
+}
+.hint { font-size: 13px; color: var(--k-dim); }
+
+/* ---- the stage: the game's window at 1:1. The transform is always set, so the game's
+   position: fixed panels are placed inside the stage, not the browser window. */
+.stagebox { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 0 0 1px var(--k-line); background: #000; }
+.stagebox.scroll { overflow-x: auto; }
+.stage {
+  --w: 1440px; --h: 900px;
+  position: relative; width: var(--w); height: var(--h); overflow: hidden; transform-origin: 0 0; transform: scale(var(--fit, 1));
+  background: #04060d center / cover no-repeat; user-select: none; -webkit-user-select: none;
+}
+.stage .bg { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; pointer-events: none; }
+/* Over a --split capture: .bg is NAME-bare.png, .fx draws under the HUD, .hudl is NAME-hud.png, .fxtop draws over it. */
+.stage .fx, .stage .hudl, .stage .fxtop { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; pointer-events: none; }
+.stage .fx { z-index: 2; }
+.stage .hudl { z-index: 3; }
+.stage .fxtop { z-index: 4; }
+.stagebar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; font: 600 10px var(--k-data); letter-spacing: 2px; color: var(--k-dim); }
+.stagebar .kbtn { font-size: 10.5px; padding: 3px 9px; letter-spacing: 1.5px; }
+.ktoast {
+  position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 9000; pointer-events: none;
+  font: 600 13px var(--k-data); letter-spacing: 2px; color: #dff8ff; text-shadow: 0 0 10px rgba(120, 220, 255, .7); white-space: nowrap;
+  background: rgba(8, 4, 18, .78); padding: 8px 16px; border: 1px solid rgba(120, 220, 255, .35);
+  opacity: 0; transition: opacity .25s ease;
+}
+.ktoast.on { opacity: 1; }
+/* A kit error the page's author must fix, e.g. a pick named after the stage's own data-size. */
+.kfail { position: sticky; top: 0; z-index: 10000; padding: 10px 16px; font: 600 12px var(--k-data); letter-spacing: 1.5px; color: #fff; background: #7a1e12; border-bottom: 2px solid var(--k-ember); overflow-wrap: anywhere; }
+[data-when]:not(.k-on) { display: none !important; }
+
+/* ---- words over the world: a dark plate each, placed clear of ships, the HUD and other words.
+   .wtag is the plate; --c tints its text and edge. [data-anchor] labels are placed by kit.js. */
+.stage [data-anchor] { position: absolute; z-index: 6; }
+.stage .wtag {
+  position: absolute; z-index: 6; padding: 3px 8px 4px; white-space: nowrap; border-radius: 3px;
+  font: 700 11px/1.3 var(--k-data); letter-spacing: 1.5px; color: var(--c, #e2d9ff);
+  background: rgba(8, 6, 16, .86); border: 1px solid color-mix(in srgb, var(--c, #e2d9ff) 45%, transparent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .5);
+}
+.stage .wtag small { display: block; font-weight: 500; font-size: 10px; letter-spacing: 1px; color: #c4b4f0; }
+.stage svg.kleads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; overflow: visible; }
+.stage svg.kleads line { stroke-width: 1.2; stroke-opacity: .75; }
+
+/* ---- notes + the copy box */
+.below { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .below { grid-template-columns: 1fr; } }
+.notes { display: grid; gap: 12px; min-width: 0; }
+.note { padding: 12px 16px; background: var(--k-panel); border: 1px solid var(--k-line); border-left: 3px solid var(--k-chrome); border-radius: 0 8px 8px 0; display: grid; gap: 6px; }
+.note h3 { margin: 0; font: 600 12.5px var(--k-data); letter-spacing: 1.5px; color: #fff; }
+.note ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; line-height: 1.45; color: #d5cdf0; font-size: 14px; }
+.note p { margin: 0; color: #d5cdf0; }
+.note.today { border-left-color: var(--k-dim); }
+.picks { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid #5a4590; border-radius: 8px; background: linear-gradient(170deg, #1f1836, #120e1e); min-width: 0; }
+.picks h3 { margin: 0; font: 600 12.5px var(--k-data); letter-spacing: 1.5px; color: var(--k-gold); }
+.picks pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 500 13px/1.5 var(--k-data); color: #f1ecff; background: #0b0816; border: 1px solid var(--k-line); border-radius: 6px; padding: 10px 12px; user-select: all; }
+.picks label { font: 600 10px var(--k-data); letter-spacing: 1.5px; color: var(--k-dim); }
+.picks textarea { width: 100%; min-height: 56px; resize: vertical; font: 13px/1.4 var(--k-ui); color: var(--k-ink); background: #0b0816; border: 1px solid var(--k-line); border-radius: 6px; padding: 8px 10px; }
+.picks .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.picks .ok { font: 600 12px var(--k-data); color: var(--k-green); }
+
+/* ---- before / after: drag the line, or click a label */
+.compare { display: grid; gap: 6px; }
+.compare .cbox { position: relative; overflow: hidden; border-radius: 6px; box-shadow: 0 0 0 1px var(--k-line); background: #000; }
+.compare .cbox img { display: block; width: 100%; height: auto; max-width: 100%; }
+.compare .cbox img + img { position: absolute; inset: 0; clip-path: inset(0 0 0 var(--at, 50%)); }
+.compare .cline { position: absolute; top: 0; bottom: 0; left: var(--at, 50%); width: 2px; margin-left: -1px; background: var(--k-gold); box-shadow: 0 0 8px var(--k-gold); pointer-events: none; }
+.compare input[type=range] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+.compare .clabs { display: flex; justify-content: space-between; font: 600 10px var(--k-data); letter-spacing: 2px; color: var(--k-dim); }
+.compare .clabs button { all: unset; cursor: pointer; }
+.compare .clabs button:hover { color: var(--k-gold); }
+
+/* ---- stills: every picture on one page; click one to see it at 1:1 */
+.stills { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.stills figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.stills img { display: block; width: 100%; max-width: 100%; height: auto; border-radius: 5px; box-shadow: 0 0 0 1px var(--k-line); cursor: zoom-in; }
+.stills figcaption { font-size: 13px; color: var(--k-dim); }
+.stills figcaption b { color: var(--k-ink); font: 600 11px var(--k-data); letter-spacing: 1.5px; margin-right: 6px; }
+.klight { position: fixed; inset: 0; z-index: 10000; overflow: auto; background: rgba(3, 2, 8, .94); cursor: zoom-out; display: none; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+.klight.on { display: block; }
+.klight img { display: block; margin: 24px auto; max-width: none; }
+
+@media (prefers-reduced-motion: reduce) { .ktoast { transition: none; } }
+
+/* ---- pitch cards: one idea each, a picture beside its rows, and a Build / Later / No verdict */
+.pitches { display: grid; gap: 14px; }
+.pitch { display: grid; grid-template-columns: 340px minmax(0, 1fr); background: var(--k-panel); border: 1px solid var(--k-line); border-radius: 10px; overflow: hidden; scroll-margin-top: 12px; }
+.pitch .art { background: radial-gradient(120% 120% at 0% 50%, #120c24, #07060f 70%); border-right: 1px solid var(--k-line); display: grid; align-content: center; padding: 10px; }
+.pitch .art svg, .pitch .art img { width: 100%; height: auto; display: block; }
+.pitch .art .cap { margin: 4px 4px 0; font-size: 12px; color: var(--k-dim); text-align: center; }
+.pitch .body { padding: 14px 18px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.pitch header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.pitch h3 { margin: 0; font: 700 18px var(--k-ui); letter-spacing: 1.5px; color: #fff; }
+.tag { font: 600 9.5px var(--k-data); letter-spacing: 1.5px; padding: 2px 7px; border-radius: 3px; border: 1px solid var(--k-line2); color: var(--k-dim); }
+.tag.rec { color: #fff3da; border-color: rgba(255, 201, 100, .6); background: rgba(255, 201, 100, .12); }
+.tag.big { color: #ffd2c4; border-color: rgba(255, 122, 92, .55); }
+.pitch .one { margin: 0; font-size: 14.5px; color: #ece6ff; max-width: 70ch; }
+.pitch dl { margin: 0; display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 6px 14px; font-size: 13.5px; }
+.pitch dt { font: 600 10px/1.9 var(--k-data); letter-spacing: 1.5px; color: var(--k-dim); text-transform: uppercase; }
+.pitch dt.q { color: #ffb45e; }
+.pitch dd { margin: 0; color: #d5cdf0; }
+.pitch .pickrow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 4px; }
+.pitch .pickrow > span { font: 600 10px var(--k-data); letter-spacing: 2px; color: var(--k-dim); }
+.seg[data-verdict] button[data-v="no"][aria-pressed="true"] { color: #ffd2c4; border-color: var(--k-ember); background: rgba(255, 122, 92, .12); box-shadow: inset 0 -2px 0 var(--k-ember); }
+.seg[data-verdict] button[data-v="later"][aria-pressed="true"] { color: var(--k-ink); border-color: var(--k-line2); background: #241840; box-shadow: inset 0 -2px 0 var(--k-line2); }
+@media (max-width: 860px) {
+  .pitch { grid-template-columns: 1fr; }
+  .pitch .art { border-right: none; border-bottom: 1px solid var(--k-line); }
+}
+@media (max-width: 560px) { .pitch dl { grid-template-columns: 1fr; gap: 2px; } .pitch dd { margin-bottom: 6px; } }
+
+/* ---- inset: a close-up of a capture (kit.js draws it), with a caption chip */
+.inset { position: relative; width: 100%; max-width: 720px; border: 1px solid var(--k-line2); border-radius: 6px; overflow: hidden; background: #05040b; }
+.inset > img { display: none; }
+.inset canvas { display: block; width: 100%; height: auto; }
+.inset canvas.fx { position: absolute; inset: 0; height: 100%; pointer-events: none; }
+.inset .cap { position: absolute; left: 10px; top: 8px; font: 600 10px var(--k-data); letter-spacing: 1.5px; color: #c4b4f0; text-shadow: 0 1px 3px #000; }
+
+/* ---- bars: one number compared across options, a row each (gate rows with data-when) */
+.bars { display: grid; gap: 8px; }
+.bars .row { display: grid; grid-template-columns: minmax(70px, 120px) 1fr 64px; align-items: center; gap: 10px; font: 600 11px var(--k-data); letter-spacing: 1px; color: #c4b4f0; }
+.bars .bar { height: 10px; background: #1b1530; border-radius: 3px; overflow: hidden; }
+.bars .bar i { display: block; height: 100%; width: var(--v, 0%); background: linear-gradient(90deg, var(--k-ember), #ffb36b); }
+.bars.good .bar i { background: linear-gradient(90deg, #3fae7c, var(--k-green)); }
+.bars .row b { color: #fff; text-align: right; font-weight: 600; }
+
+/* ---- items: a label Mark can name in the chat, a Keep / Change / Drop, and the asks that fit */
+.ilabel { display: inline-block; margin-right: 4px; padding: 0 7px; font: 700 15px/1.5 var(--k-data); letter-spacing: 1px; color: #120c1f; background: var(--k-gold); border-radius: 4px; vertical-align: 1px; }
+[data-item] > .ilabel { align-self: start; justify-self: start; }
+.seg[data-verdict] button[data-v="keep"][aria-pressed="true"] { color: #e2ffee; border-color: var(--k-green); background: rgba(125, 255, 184, .12); box-shadow: inset 0 -2px 0 var(--k-green); }
+.seg[data-verdict] button[data-v="change"][aria-pressed="true"] { color: #dff8ff; border-color: var(--k-cyan); background: rgba(62, 224, 255, .1); box-shadow: inset 0 -2px 0 var(--k-cyan); }
+.seg[data-verdict] button[data-v="drop"][aria-pressed="true"] { color: #ffd2c4; border-color: var(--k-ember); background: rgba(255, 122, 92, .12); box-shadow: inset 0 -2px 0 var(--k-ember); }
+.kasks { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.kask { border-style: dashed; color: var(--k-cyan); border-color: rgba(62, 224, 255, .5); background: transparent; font-size: 11.5px; padding: 5px 10px; }
+.kask:hover { border-style: solid; background: rgba(62, 224, 255, .08); }
+.kask.sent { color: var(--k-green); border: 1px solid var(--k-green); }
+.kask.sent::after { content: " ✓"; }
+.kasks .ok { font: 600 11px var(--k-data); color: var(--k-green); }
+.tag.done { color: #e2ffee; border-color: rgba(125, 255, 184, .6); background: rgba(125, 255, 184, .1); }
+
+/* ---- the send box: SEND PICKS first, the voice-notes toggle, COPY, and why a send cannot go */
+.kbtn.send { font-weight: 700; letter-spacing: 1px; color: #07060f; border-color: var(--k-gold); background: var(--k-gold); }
+.kbtn.send:hover:not(:disabled) { background: #ffd88a; border-color: #ffd88a; }
+.kbtn.send:disabled { opacity: .45; cursor: not-allowed; }
+.kbtn.send.sent::after { content: " ✓"; }
+.picks .kstate { margin-left: auto; font: 600 10.5px var(--k-data); letter-spacing: 1.5px; color: #ffb45e; }
+.picks .kstate.on { color: var(--k-green); }
+.kbtn[hidden] { display: none; }
+
+/* ---- answers on the page: Clarify rewrites an item as steps, Show me in context adds a view */
+.answer { display: grid; gap: 10px; padding: 14px 18px 16px; border-top: 1px solid var(--k-line); background: #0b0816; grid-column: 1 / -1; }
+.answer h4 { margin: 0; font: 600 11px var(--k-data); letter-spacing: 2px; color: var(--k-green); }
+.steps { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; counter-reset: kst; }
+.steps > li { counter-increment: kst; display: grid; gap: 6px; align-content: start; padding: 10px 12px; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: 8px; font-size: 13.5px; color: #d5cdf0; }
+.steps > li::before { content: "STEP " counter(kst); font: 600 10px var(--k-data); letter-spacing: 2px; color: var(--k-gold); }
+.steps img { width: 100%; height: auto; border-radius: 5px; }
+
+/* ---- flipbook: real game frames from strip.py, play once, pause and step */
+.flip { display: grid; gap: 6px; width: 100%; }
+.flipview { width: 100%; aspect-ratio: 16 / 9; background-repeat: no-repeat; background-position: 0 0; border-radius: 5px; box-shadow: 0 0 0 1px var(--k-line); background-color: #000; }
+.flipbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.flipbar .kbtn { padding: 4px 9px; font-size: 11.5px; }
+.fliptime { font: 600 10px var(--k-data); letter-spacing: 1.5px; color: var(--k-dim); }
+
+/* ---- player: play once, pause, speeds, scrub, a caption per phase (Mock.player) */
+.player { display: grid; grid-template-columns: auto auto minmax(80px, 1fr) auto; align-items: center; gap: 8px 10px; padding: 8px 10px; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: 8px; }
+.player .pspeeds { display: inline-flex; gap: 4px; }
+.player .pspeeds:empty { display: none; }
+.player .kbtn { padding: 4px 9px; font-size: 11.5px; }
+.player .pscrub { width: 100%; accent-color: var(--k-gold); }
+.player .ptime { font: 600 10.5px var(--k-data); letter-spacing: 1px; color: var(--k-dim); white-space: nowrap; }
+.player .pcap { grid-column: 1 / -1; margin: 0; font-size: 13.5px; color: #ece6ff; min-height: 1.5em; }
+@media (max-width: 560px) { .player { grid-template-columns: auto 1fr; } .player .pscrub { grid-column: 1 / -1; } }
+
+/* ---- stat table: yours beside the new values, changed cells marked, a label and pick per row */
+.statbox { overflow-x: auto; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-panel); }
+table.stats { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.stats th, table.stats td { padding: 7px 12px; text-align: left; border-top: 1px solid #211936; white-space: nowrap; }
+table.stats thead th { border-top: none; font: 600 10px var(--k-data); letter-spacing: 1.5px; color: var(--k-dim); }
+table.stats tbody th { font-weight: 600; color: #fff; }
+table.stats td { font-family: var(--k-data); color: #d5cdf0; }
+table.stats td.changed { color: var(--k-gold); font-weight: 700; background: rgba(255, 201, 100, .07); }
+table.stats td.changed s { color: var(--k-dim); font-weight: 400; }
+table.stats .seg { flex-wrap: nowrap; }
+table.stats .kasks { margin-left: 8px; }
+
+/* ---- round banner: what changed since the last round, by label */
+.round { display: grid; gap: 6px; padding: 10px 14px; background: var(--k-panel); border: 1px solid var(--k-line); border-left: 3px solid var(--k-gold); border-radius: 0 8px 8px 0; font-size: 13.5px; color: #d5cdf0; }
+.round p { margin: 0; }
+.roundhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font: 600 10.5px var(--k-data); letter-spacing: 1.5px; color: var(--k-dim); }
+.roundhead > b { color: var(--k-gold); font-size: 12px; letter-spacing: 2px; }
+.rchip { font: 700 11px var(--k-data); letter-spacing: 1px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--k-line2); background: var(--k-panel2); color: var(--k-ink); }
+button.rchip { cursor: pointer; }
+.r-changed .rchip, .tag.rtag.r-changed { color: #dff8ff; border-color: rgba(62, 224, 255, .55); }
+.r-new .rchip, .tag.rtag.r-new { color: #e2ffee; border-color: rgba(125, 255, 184, .6); }
+.r-dropped .rchip { text-decoration: line-through; }
+.tag.rtag { justify-self: start; align-self: center; margin-left: 6px; }
+.k-changed { box-shadow: 0 0 0 1px rgba(62, 224, 255, .45); }
+.k-new { box-shadow: 0 0 0 1px rgba(125, 255, 184, .5); }

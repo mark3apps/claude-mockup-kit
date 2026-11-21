@@ -1,0 +1,62 @@
+<meta charset="utf-8">
+<title>Size Lineup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- Size lineup starter: every item at true world scale, resizable, the changes sent as picks.
+     Make sprites.json and s/ with your project's sprite tool (README: Size lineups), copy this next to them as
+     page.html, rename the title, edit the words marked EDIT. Build: python3 $KIT/build.py page.html -->
+<style>
+@@KIT_CSS@@
+@@SIZES_CSS@@
+</style>
+
+<canvas id="sky" aria-label="Every item at true scale. Drag to pan, scroll or pinch to zoom, click one to resize it."></canvas>
+
+<div class="stop">
+  <div class="sbrand">
+    <h1>SIZE LINEUP</h1>
+    <p>EDIT: what is on the page and at what scale. Drag to pan, scroll or pinch to zoom, click one to resize it, shift-click to pick several.</p>
+  </div>
+  <div class="szoom" role="group" aria-label="View">
+    <button class="kbtn" id="zout" type="button" aria-label="Zoom out">−</button>
+    <output id="zread"></output>
+    <button class="kbtn" id="zin" type="button" aria-label="Zoom in">+</button>
+    <button class="kbtn" id="zfit" type="button">FIT ALL</button>
+    <button class="tog" id="znames" type="button" aria-pressed="true">Names</button>
+  </div>
+</div>
+
+<!-- The picked item. The kit names it for Tell me more from data-item / data-name. -->
+<section class="sfloat" id="sdock" data-item="" data-name="" data-asks="more" hidden aria-live="polite">
+  <div class="shead"><b class="ilabel"></b><div><h2 id="sname"></h2><div class="suse" id="suse"></div></div></div>
+  <div class="srow">
+    <input id="sk" type="range" min="-200" max="200" step="1" value="0" aria-label="Size, ×¼ to ×4">
+    <input id="slen" type="number" min="0.1" step="0.1" aria-label="Length in world units">
+  </div>
+  <div id="snums"></div>
+  <div class="srow" id="smrow"><button class="kbtn" id="ssame" type="button" hidden></button><button class="kbtn" id="smatch" type="button" hidden></button><button class="tog" id="smulti" type="button" aria-pressed="false">Add on tap</button></div>
+  <div class="srow">
+    <button class="kbtn" id="sreset" type="button">RESET</button>
+    <button class="kbtn" id="shideit" type="button">HIDE ITEM</button>
+    <span class="kasks"><button class="kbtn kask" type="button" data-ask="more">Tell me more</button><span class="ok"></span></span>
+    <button class="kbtn" id="sclose" type="button" style="margin-left:auto">CLOSE</button>
+  </div>
+</section>
+
+<div class="picks sfloat">
+  <div class="srow"><h3>SIZE CHANGES</h3><button class="kbtn shide" id="sfold" type="button" aria-expanded="true">HIDE</button></div>
+  <pre></pre>
+  <label for="picksNote">A NOTE TO SEND WITH THE SIZES (OPTIONAL)</label>
+  <textarea id="picksNote" rows="2"></textarea>
+  <div class="row"><button class="kbtn send" data-send>SEND SIZES</button><button class="tog" data-notes aria-pressed="true">Voice notes follow in chat</button><button class="kbtn gold" data-copy>COPY</button><button class="kbtn" id="sundo" type="button">UNDO ALL</button><span class="ok"></span></div>
+</div>
+
+<!-- sprites.json: {unit, ref, refName, facets: [{key, name}], sprites: {key: {src, w, h, ox, oy, ppu,
+     design}}, items: [{id, key, name, use, len, group, mine, type, ...a field per facet}], lines: {title,
+     type, items: [{name, len}]}}. a project's sprite tool writes it; sizes.js builds the FILTER panel from facets. -->
+<script type="application/json" id="sizes">@@FILE:sprites.json@@</script>
+<script>
+@@KIT_JS@@
+</script>
+<script>
+@@SIZES_JS@@
+</script>

@@ -1,0 +1,76 @@
+/* Cost charts (costs.js): the view bar, the chip palette, the legend and the chart, then the hover
+   tip, the dragged chip and the editor, which float over the page. */
+.costchart { display: grid; gap: 8px; min-width: 0; padding: 14px; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: 10px; }
+.costchart .ctitle { margin: 0; font: 700 13px var(--k-ui); letter-spacing: 2px; color: var(--k-ink); }
+.costchart .chow { margin: 0; max-width: 90ch; font-size: 13px; color: var(--k-dim); }
+.costchart .dim { color: var(--k-dim); }
+.cbar { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: 12px; }
+.cbar .clab { font: 600 10.5px var(--k-data); letter-spacing: 1px; color: var(--k-dim); }
+.cbar .cread { min-width: 80px; font: 600 12px var(--k-data); color: var(--k-gold); }
+.cbar .chint { flex: 1 1 240px; color: var(--k-dim); }
+.cbar .ccount { font: 600 10.5px var(--k-data); letter-spacing: 1px; color: var(--k-gold); }
+.cpal { display: grid; gap: 6px; }
+.cprow { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: 12px; }
+.rchip { touch-action: none; cursor: grab; border: 0; border-radius: 999px; padding: 5px 13px; font: 700 11.5px var(--k-ui); letter-spacing: 1px; color: #141726; background: var(--rc); box-shadow: 0 2px 0 color-mix(in srgb, var(--rc) 55%, #000), 0 0 14px color-mix(in srgb, var(--rc) 35%, transparent); }
+.rchip:hover { transform: translateY(-1px); }
+.rchip:active { cursor: grabbing; }
+.rar { display: inline-flex; gap: 2px; margin-left: 7px; vertical-align: middle; }
+.rd { width: 5px; height: 5px; border-radius: 50%; background: #141726; opacity: .22; }
+.rd.on { opacity: .85; }
+.clegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--k-dim); }
+.clegend span { display: inline-flex; align-items: center; gap: 6px; }
+.clegend i { width: 11px; height: 11px; border-radius: 2px; }
+.clegend i.ln { height: 4px; border-radius: 2px; }
+.cpic { min-width: 0; overflow: hidden; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.cpic.grab { cursor: grabbing; }
+.cpic svg { display: block; width: 100%; height: auto; }
+.cpic text { font: 11px var(--k-data); fill: var(--k-dim); }
+.cpic .cgh { font: 700 12px var(--k-ui); letter-spacing: 1.5px; fill: var(--k-gold); }
+.cpic .cgl { stroke: var(--k-gold); stroke-opacity: .35; }
+.cpic .cgrid { stroke: var(--k-line); }
+.cpic .cax { font-size: 10.5px; }
+.cpic .ctot { fill: var(--k-dim); }
+.cpic .cover { fill: var(--k-dim); }
+.cpic .cseg { font-size: 10px; letter-spacing: .4px; }
+.cpic .cpl { font-size: 9px; }
+.cpic .cpip { stroke: var(--k-ink); stroke-opacity: .3; }
+.cpic .cpipv { fill: var(--k-chrome); opacity: .6; }
+.cpic .cph { fill: none; stroke: var(--k-dim); stroke-dasharray: 3 2; }
+.cpic .cadd { fill: none; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.cpic .cdrag { fill: transparent; cursor: ew-resize; }
+.cpic .cknob { cursor: ew-resize; }
+.cpic .ck { stroke: var(--k-panel); stroke-width: 1.5; }
+.cpic .cname { cursor: pointer; }
+.cpic .cname text { font: 600 11.5px var(--k-ui); letter-spacing: .5px; fill: var(--k-ink); text-decoration: underline dotted; }
+.cpic .cname text.csub { font: 9.5px var(--k-data); letter-spacing: 1px; fill: var(--k-dim); text-decoration: none; }
+.cpic .cstep { cursor: pointer; }
+.cpic .cstep text { font-size: 15px; fill: var(--k-dim); }
+.cpic .cstep:hover text { fill: var(--k-ink); }
+.cpic .ctier { fill: none; stroke: var(--k-gold); stroke-width: 1.5; }
+.cpic .ctiern { font: 700 12px var(--k-ui); fill: var(--k-gold); }
+@media (prefers-reduced-motion: no-preference) { .cpic .cpulse { animation: cpulse .9s infinite; } .rchip { transition: transform .12s; } }
+@keyframes cpulse { 50% { opacity: .3; } }
+.ctip { position: fixed; z-index: 20; pointer-events: none; max-width: 320px; padding: 8px 10px; font-size: 12px; color: var(--k-ink); background: var(--k-panel2); border: 1px solid var(--k-line2); border-radius: 8px; box-shadow: 0 6px 24px #0008; }
+.ctip .h { font-weight: 700; letter-spacing: .5px; }
+.ctip[hidden], .cghost[hidden] { display: none; }
+.cghost { position: fixed; z-index: 40; pointer-events: none; display: flex; align-items: center; gap: 8px; padding: 3px 10px 3px 3px; font-size: 12px; color: var(--k-ink); background: var(--k-panel2); border: 1px solid var(--k-line); border-radius: 999px; box-shadow: 0 6px 20px #0008; }
+.cghost b { padding: 3px 10px; font: 700 11px var(--k-ui); letter-spacing: 1px; color: #141726; border-radius: 999px; }
+.cpop { position: fixed; z-index: 30; display: grid; gap: 10px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: auto; padding: 12px 14px; background: var(--k-panel); border: 1px solid var(--k-gold); border-radius: 10px; box-shadow: 0 10px 40px #000a; }
+.cpop-h { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.cpop-h b { font: 700 13px var(--k-ui); letter-spacing: 1px; }
+.cpop .cgrp { display: grid; gap: 4px; }
+.cpop .csec { font: 600 10.5px var(--k-data); letter-spacing: 1px; color: var(--k-dim); text-transform: uppercase; }
+.cpop p { margin: 0; font-size: 12px; }
+.ceds { display: grid; grid-template-columns: repeat(4, auto auto); gap: 3px 6px; align-items: center; justify-content: start; }
+.ceds i { font: 600 10px var(--k-ui); letter-spacing: .8px; font-style: normal; color: var(--k-dim); }
+.ced { width: 4.6em; padding: 2px 5px; font: 12px var(--k-data); text-align: right; color: var(--k-ink); background: var(--k-panel2); border: 1px solid transparent; border-radius: 4px; }
+.ced:hover { border-color: var(--k-line2); }
+.ced:focus { border-color: var(--k-gold); outline: none; }
+.ced.chg { border-color: var(--k-gold); color: var(--k-gold); }
+.ced.z { color: var(--k-dim); }
+@media (max-width: 600px) {
+  .ceds { grid-template-columns: repeat(2, auto auto); }
+  .costchart { padding: 10px; }
+  .cbar .chint, .cprow > .dim:last-child { display: none; }
+  .rchip { padding: 4px 9px; font-size: 10.5px; }
+}
