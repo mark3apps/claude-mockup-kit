@@ -266,7 +266,7 @@
     [p.fix, p.measured, p.when, `${runs.length} runs`].filter(Boolean).forEach((t, i) => { if (i) put(meta, el('i', {}, ' · ')); put(meta, document.createTextNode(t)); });
     put(head, meta);
     if (p.note) put(head, el('p', { class: 'pnote' }, p.note));
-    if (m !== metric) put(head, el('p', { class: 'pnote' }, 'These runs carry no GPU column (the app's headless runner adds it with the GPU on), so this is CPU work.'));
+    if (m !== metric) put(head, el('p', { class: 'pnote' }, 'These runs carry no GPU column (a run with the GPU on adds it), so this is CPU work.'));
     put(box, head);
 
     const sides = { before: pooled(p, 'before', m), after: pooled(p, 'after', m) };
