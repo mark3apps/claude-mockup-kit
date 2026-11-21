@@ -7,6 +7,8 @@ KIT=$(cd "$(dirname "$0")" && pwd)
 OUT=${1:-$(mktemp -d)}
 mkdir -p "$OUT"
 cd "$KIT"
+# The kit's own pages build without any project's add-on, wherever this clone sits.
+export MOCKUP_ADDONS=
 python3 -m unittest -q test_build
 
 # The template needs a capture: a plain stand-in picture.

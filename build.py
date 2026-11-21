@@ -15,8 +15,9 @@ Placeholders in PAGE.html (see README.md):
 Paths are relative to --assets (default: the page's folder). Any placeholder left over fails.
 A project adds its own placeholders (its app's CSS, icons, fonts) in an add-on: a Python file
 defining PLACEHOLDERS = {NAME: fn(arg, base)} that returns the text (README: Project add-ons).
-Add-ons come from --addon, then $MOCKUP_ADDONS (path-separated), then `.claude/mockup-addon.py`
-in the page's folder or any folder above it, then the same file in every repo beside this kit's.
+Add-ons are --addon (repeatable) plus $MOCKUP_ADDONS (path-separated); with neither, build.py
+looks for `.claude/mockup-addon.py` in the page's folder and every folder above it, then in every
+repo beside this kit's clone.
 Import it for custom steps: `from build import uri`; `stage_css.scoped` scopes an app's CSS.
 """
 import argparse
@@ -77,11 +78,14 @@ def _img(spec, base):
 
 
 def addon_paths(page, given=()):
-    """Every add-on file for PAGE, in the order its placeholders win."""
-    found = [Path(p) for p in given]
-    found += [Path(p) for p in os.environ.get('MOCKUP_ADDONS', '').split(os.pathsep) if p]
-    found += [d / ADDON for d in [page.resolve().parent, *page.resolve().parents] if (d / ADDON).is_file()]
-    found += sorted(p for p in KIT.parent.glob(f'*/{ADDON}') if p.is_file())
+    """Every add-on file for PAGE, in the order its placeholders win. --addon or a set
+    $MOCKUP_ADDONS (even empty) is the whole list; only without both are add-ons looked for."""
+    env = os.environ.get('MOCKUP_ADDONS')
+    if given or env is not None:
+        found = [Path(p) for p in given] + [Path(p) for p in (env or '').split(os.pathsep) if p]
+    else:
+        found = [d / ADDON for d in [page.resolve().parent, *page.resolve().parents] if (d / ADDON).is_file()]
+        found += sorted(p for p in KIT.parent.glob(f'*/{ADDON}') if p.is_file())
     out = []
     for p in found:
         if p.resolve() not in [q.resolve() for q in out]:
@@ -100,7 +104,8 @@ def load_addons(paths):
         spec.loader.exec_module(mod)
         for name, fn in getattr(mod, 'PLACEHOLDERS', {}).items():
             if name in table:
-                print(f'note: @@{name}@@ from {table[name][1]}, not {p}', file=sys.stderr)
+                print(f'WARNING: two add-ons define @@{name}@@: using {table[name][1]}, not {p}'
+                      ' (pass --addon to choose)', file=sys.stderr)
                 continue
             table[name] = (fn, p)
     return table

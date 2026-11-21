@@ -38,10 +38,12 @@ PLACEHOLDERS = {'APP_CSS': app_css}
 ```
 
 Each function takes the text after the colon (`''` for none) and the page's asset folder, and
-returns the text to put in. `build.py` finds add-ons in this order, the first to define a name
-winning: `--addon FILE` (repeatable), `$MOCKUP_ADDONS` (path-separated), `.claude/mockup-addon.py`
-in the page's folder or any folder above it, then the same file in every repo beside the kit's
-clone (`/home/user/*/`). `@@APP_CSS@@` is the one name the kit's own pages use; without an add-on it
+returns the text to put in. `--addon FILE` (repeatable) and `$MOCKUP_ADDONS` (path-separated;
+set but empty means none) name the add-ons outright. With neither, `build.py` takes
+`.claude/mockup-addon.py` from the page's folder and every folder above it, then from every repo
+beside the kit's clone (`/home/user/*/`); the first to define a name wins, and a clash prints a
+warning (pass `--addon` to choose). An add-on is Python and runs at build time: only clone repos
+you trust beside the kit. `@@APP_CSS@@` is the one name the kit's own pages use; without an add-on it
 gives `standin.css`, so `template.html` builds anywhere. `stage_css.scoped(css)` prefixes every rule
 with `.stage`, turns `:root`/`html`/`body` into the stage, keeps `@keyframes` and `@media`, drops
 `@font-face`, and rewrites `vw`/`vh` against the stage size. The page palette is `kit.css`'s

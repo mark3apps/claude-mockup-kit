@@ -175,7 +175,7 @@ kbd { font: 600 11px var(--k-data); border: 1px solid var(--k-line2); border-rad
 .bars.good .bar i { background: linear-gradient(90deg, #3fae7c, var(--k-green)); }
 .bars .row b { color: #fff; text-align: right; font-weight: 600; }
 
-/* ---- items: a label Mark can name in the chat, a Keep / Change / Drop, and the asks that fit */
+/* ---- items: a label the reviewer can name in the chat, a Keep / Change / Drop, and the asks that fit */
 .ilabel { display: inline-block; margin-right: 4px; padding: 0 7px; font: 700 15px/1.5 var(--k-data); letter-spacing: 1px; color: #120c1f; background: var(--k-gold); border-radius: 4px; vertical-align: 1px; }
 [data-item] > .ilabel { align-self: start; justify-self: start; }
 .seg[data-verdict] button[data-v="keep"][aria-pressed="true"] { color: #e2ffee; border-color: var(--k-green); background: rgba(125, 255, 184, .12); box-shadow: inset 0 -2px 0 var(--k-green); }
