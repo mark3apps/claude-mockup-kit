@@ -1,0 +1,106 @@
+{
+ "unit": "u",
+ "ref": "D1",
+ "refName": "Dart",
+ "facets": [
+  {
+   "key": "type",
+   "name": "Type"
+  },
+  {
+   "key": "where",
+   "name": "Where"
+  }
+ ],
+ "sprites": {
+  "dart": {
+   "src": "@@IMG:s/dart.png|png@@",
+   "w": 64,
+   "h": 40,
+   "ox": 32.0,
+   "oy": 20.0,
+   "ppu": 8,
+   "design": 8.0
+  },
+  "barge": {
+   "src": "@@IMG:s/barge.png|png@@",
+   "w": 200,
+   "h": 70,
+   "ox": 100.0,
+   "oy": 35.0,
+   "ppu": 8,
+   "design": 25.0
+  },
+  "station": {
+   "src": "@@IMG:s/station.png|png@@",
+   "w": 260,
+   "h": 260,
+   "ox": 130.0,
+   "oy": 130.0,
+   "ppu": 8,
+   "design": 32.5
+  },
+  "moon": {
+   "src": "@@IMG:s/moon.png|png@@",
+   "w": 400,
+   "h": 400,
+   "ox": 200.0,
+   "oy": 200.0,
+   "ppu": 8,
+   "design": 50.0
+  }
+ },
+ "items": [
+  {
+   "id": "D1",
+   "key": "dart",
+   "mine": true,
+   "len": 8,
+   "name": "Dart",
+   "use": "Your craft",
+   "group": "Craft",
+   "type": "Craft",
+   "where": "Anywhere"
+  },
+  {
+   "id": "D2",
+   "key": "dart",
+   "len": 8,
+   "name": "Dart, escort",
+   "use": "Escort",
+   "group": "Craft",
+   "type": "Craft",
+   "where": "Stations"
+  },
+  {
+   "id": "B1",
+   "key": "barge",
+   "len": 25,
+   "name": "Barge",
+   "use": "Cargo",
+   "group": "Craft",
+   "type": "Craft",
+   "where": "Stations"
+  },
+  {
+   "id": "S1",
+   "key": "station",
+   "len": 32.5,
+   "name": "Ring station",
+   "use": "Dock",
+   "group": "Places",
+   "type": "Places",
+   "where": "Stations"
+  },
+  {
+   "id": "M1",
+   "key": "moon",
+   "len": 50,
+   "name": "Small moon",
+   "use": "Body",
+   "group": "Bodies",
+   "type": "Bodies",
+   "where": "Anywhere"
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+none: frames 120 | CPU work ms median 11.90 p95 14.10 max 21.30 | GPU wait ms median 1.70 p95 2.20 max 2.40
+shadows: frames 120 | CPU work ms median 9.80 p95 11.70 max 18.20 | GPU wait ms median 1.60 p95 2.10 max 2.30
+particles: frames 120 | CPU work ms median 11.10 p95 13.20 max 20.10 | GPU wait ms median 1.70 p95 2.20 max 2.40
+text: frames 120 | CPU work ms median 11.70 p95 13.90 max 21.00 | GPU wait ms median 1.70 p95 2.20 max 2.40

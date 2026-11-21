@@ -1,0 +1,83 @@
+<meta charset="utf-8">
+<title>Thing Perf</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- Perf comparison starter. Copy it next to your logs as page.html, rename the title, then
+     replace every part marked EDIT. Build: python3 $KIT/build.py page.html
+     The numbers below are made up: a page that ships them is wrong. -->
+<style>
+@@KIT_CSS@@
+@@PERF_CSS@@
+</style>
+
+<div class="page">
+  <h1>THING PERF<small>EDIT: N SCENES · BEFORE AND AFTER #PR · WHERE AND WHEN MEASURED</small></h1>
+  <p class="lede">EDIT: one paragraph. What was slow, what changed, and how it was measured: which
+    machine and display, window or offscreen, release build, how many runs each side, alternated in one
+    session. Numbers from different sessions are not comparable, so say which pairs share one.</p>
+  <div class="ptargets"></div>
+  <div id="perfTiles"></div>
+
+  <h2>EVERY SCENE</h2>
+  <div id="perfTable"></div>
+
+  <h2>ONE SCENE, FRAME BY FRAME</h2>
+  <div class="controls" id="perfPicks"></div>
+  <div id="perfDetail"></div>
+
+  <h2>WHERE THE TIME GOES</h2>
+  <div id="perfPasses"></div>
+
+  <div class="picks">
+    <h3>COPY FOR THE CHAT</h3>
+    <pre></pre>
+    <label for="picksNote">ANYTHING TO ADD (OPTIONAL)</label>
+    <textarea id="picksNote" placeholder="e.g. run the crash scene again on the LG"></textarea>
+    <div class="row"><button class="kbtn send" data-send>SEND PICKS</button><button class="tog" data-notes aria-pressed="true">Voice notes follow in chat</button><button class="kbtn gold" data-copy>COPY</button><span class="ok"></span></div>
+  </div>
+</div>
+
+<!-- EDIT: the data. targets defaults to 90 / 120. Each pair is one scene, before against after:
+     - given numbers: "unit": "fps" or "ms", "before", "after" (before null = still open).
+       "part": true marks an ms number that is one piece of a frame, so it gets no budget chip.
+     - or "runs": per-frame logs (script.perflog below), each {"side": "before"|"after",
+       "label", "log": "<script id>"}; the headline is the pooled median. Alternate them:
+       before, after, before, after, in one session.
+     "fix", "measured" and "when" print under the scene name; "note" prints above its detail. -->
+<script type="application/json" id="perf">
+{
+  "targets": { "floor": 90, "aim": 120 },
+  "pairs": [
+    { "scene": "EDIT Zoomed out near planets", "unit": "fps", "before": 91, "after": 118,
+      "fix": "#0000 what changed", "measured": "Mac window, Samsung 5120x1440", "when": "2026-11-04" },
+    { "scene": "EDIT Debris after a crash", "unit": "fps", "before": null, "after": 57,
+      "fix": "Still being fixed", "measured": "Mac full screen, Samsung 5120x1440", "when": "2026-11-04" },
+    { "scene": "EDIT Drawing the scrap cloud", "unit": "ms", "before": 14.8, "after": 1.3, "part": true,
+      "fix": "#0000", "measured": "Mac window", "when": "2026-11-04" },
+    { "id": "busy", "scene": "EDIT Busy rock field", "measured": "cloud, headless with GPU, 1440x900, one session",
+      "fix": "#0000", "when": "2026-11-04",
+      "runs": [
+        { "side": "before", "label": "main 1", "log": "busy-b1" },
+        { "side": "after", "label": "fix 1", "log": "busy-a1" },
+        { "side": "before", "label": "main 2", "log": "busy-b2" },
+        { "side": "after", "label": "fix 2", "log": "busy-a2" }
+      ] }
+  ]
+}
+</script>
+<!-- One frame log each, inlined as is (README: Perf pages has the format). -->
+<script type="text/plain" class="perflog" id="busy-b1">@@FILE:logs/busy-main-1.txt@@</script>
+<script type="text/plain" class="perflog" id="busy-a1">@@FILE:logs/busy-fix-1.txt@@</script>
+<script type="text/plain" class="perflog" id="busy-b2">@@FILE:logs/busy-main-2.txt@@</script>
+<script type="text/plain" class="perflog" id="busy-a2">@@FILE:logs/busy-fix-2.txt@@</script>
+<!-- Optional: one block per pass-skip sweep, "<pass>: frames N | CPU work ms median ... | GPU
+     wait ms median ..." a line (a frame log's summary line, prefixed). The "none" line (or
+     data-base) is the full frame; each bar is the ms saved with that pass skipped.
+     data-metric picks work, gpu or total (default: total when the lines carry GPU wait). -->
+<script type="text/plain" class="perfpasses" data-scene="EDIT Planet crash" data-measured="EDIT Mac offscreen 2560x720 @2x, one run each">@@FILE:logs/passes.txt@@</script>
+
+<script>
+@@KIT_JS@@
+</script>
+<script>
+@@PERF_JS@@
+</script>

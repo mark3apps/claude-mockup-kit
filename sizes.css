@@ -1,0 +1,59 @@
+/* The size lineup (sizes.html): one full-screen canvas, the view bar on top, the dock for the
+   picked item bottom left, the size changes (the kit's .picks) bottom right. */
+html, body { height: 100%; }
+body { overflow: hidden; }
+#sky { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#sky.drag { cursor: grabbing; }
+.stop { position: fixed; z-index: 2; top: calc(env(safe-area-inset-top, 0px) + 10px); left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; justify-content: space-between; pointer-events: none; }
+.stop > * { pointer-events: auto; }
+.sbrand { max-width: 460px; min-width: 0; padding: 8px 12px; background: rgba(18, 13, 31, .9); border: 1px solid var(--k-line); border-radius: 8px; }
+.sbrand h1 { font-size: 16px; letter-spacing: 3px; }
+.sbrand p { margin: 4px 0 0; font-size: 12.5px; color: var(--k-dim); }
+.szoom { display: flex; gap: 6px; align-items: center; padding: 6px; background: rgba(18, 13, 31, .9); border: 1px solid var(--k-line); border-radius: 8px; }
+.szoom .kbtn, .szoom .tog { white-space: nowrap; }
+.szoom output { min-width: 78px; text-align: center; font: 600 10.5px var(--k-data); letter-spacing: 1px; color: var(--k-dim); }
+.sfloat { position: fixed; z-index: 3; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); display: grid; gap: 8px; padding: 12px 14px; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: 10px; box-shadow: 0 10px 40px #0009; }
+#sdock { z-index: 4; left: max(16px, env(safe-area-inset-left, 0px)); width: min(430px, calc(100% - 32px)); }
+#sdock[hidden] { display: none; }
+.shead { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.shead h2 { margin: 0; font: 700 15px/1.2 var(--k-ui); letter-spacing: .5px; color: #fff; }
+.shead .suse { font-size: 12.5px; color: var(--k-dim); }
+#sdock .ilabel.you { background: var(--k-cyan); }
+.srow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#sk { flex: 1; min-width: 160px; accent-color: var(--k-gold); }
+#slen { width: 84px; font: 13px var(--k-data); color: var(--k-ink); background: #0b0816; border: 1px solid var(--k-line); border-radius: 6px; padding: 5px 6px; }
+#snums { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 600 10.5px var(--k-data); letter-spacing: 1px; color: var(--k-dim); }
+#snums b { color: var(--k-ink); }
+.picks.sfloat { right: max(16px, env(safe-area-inset-right, 0px)); width: min(400px, calc(100% - 32px)); max-height: calc(100vh - 120px); overflow: auto; }
+.picks.sfloat pre { max-height: 150px; overflow: auto; }
+.picks.sfloat pre:empty::before { content: "No changes yet. Click an item and drag its size bar."; color: var(--k-dim); }
+.picks.sfloat .shide { justify-self: end; }
+.picks.min > :not(.srow) { display: none; }
+.sfpop { position: fixed; z-index: 5; width: min(380px, calc(100vw - 32px)); max-height: min(60vh, 460px); overflow: auto; display: grid; gap: 8px; padding: 10px; background: var(--k-panel); border: 1px solid var(--k-line2); border-radius: 8px; box-shadow: 0 10px 40px #000a; }
+.sfpop[hidden] { display: none; }
+.sftabs { display: flex; gap: 2px; border-bottom: 1px solid var(--k-line); }
+.sftabs button { font: 600 11px var(--k-ui); letter-spacing: .5px; color: var(--k-dim); background: none; border: 0; border-bottom: 2px solid transparent; padding: 4px 8px 6px; cursor: pointer; }
+.sftabs button[aria-pressed="true"] { color: #fff; border-bottom-color: var(--k-gold); }
+.sfchips { display: flex; flex-wrap: wrap; gap: 4px; }
+.sfchips button { font: 600 11.5px var(--k-ui); color: var(--k-ink); background: var(--k-panel2); border: 1px solid var(--k-line2); border-radius: 12px; padding: 3px 9px; cursor: pointer; }
+.sfchips button[aria-pressed="true"] { color: #fff3da; border-color: var(--k-gold); background: rgba(255, 201, 100, .16); }
+.sfchips small { margin-left: 5px; font: 600 10px var(--k-data); color: var(--k-dim); }
+#smrow[hidden], #smrow [hidden] { display: none; }
+#smulti { display: none; }
+@media (pointer: coarse) { #smulti { display: inline-block; } }
+.sfgone { padding-top: 6px; border-top: 1px solid var(--k-line); align-items: center; }
+.sfgone[hidden] { display: none; }
+.sfgone > span { font: 600 10px var(--k-data); letter-spacing: 2px; color: var(--k-dim); margin-right: 4px; }
+.sffoot { display: flex; gap: 8px; align-items: center; }
+.sffoot select { font: 600 11.5px var(--k-ui); color: var(--k-ink); background: var(--k-panel2); border: 1px solid var(--k-line2); border-radius: 5px; padding: 4px 6px; }
+.sffoot output { flex: 1; font: 600 10px var(--k-data); letter-spacing: 1px; color: var(--k-dim); text-align: right; }
+.sffoot .kbtn { padding: 4px 9px; font-size: 11.5px; }
+.sffoot .kbtn:disabled { opacity: .4; cursor: default; }
+@media (max-width: 860px) {
+  .szoom { gap: 4px; padding: 4px; }
+  .szoom .kbtn, .szoom .tog { padding: 6px 8px; }
+  .szoom output { min-width: 0; }
+  #sdock { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
+  .picks.sfloat { left: max(16px, env(safe-area-inset-left, 0px)); width: auto; }
+  .sbrand p { display: none; }
+}
