@@ -94,8 +94,6 @@
     // A component's own lines (a cost chart's changes) follow the page's picks.
     const extra = Mock.extras.map(f => f()).filter(Boolean);
     if (extra.length) t = [t, ...extra].filter(Boolean).join('\n');
-    const note = document.querySelector('.picks textarea');
-    if (note && note.value.trim()) t += `\nNotes: ${note.value.trim()}`;
     return t;
   }
 
@@ -797,9 +795,8 @@
     try {
       const s = {};
       pickers().forEach(p => { s[p.key] = state[p.key]; });
-      const n = document.querySelector('.picks textarea');
       const v = document.querySelector('.picks [data-notes]');
-      localStorage.setItem(saveKey(), JSON.stringify({ s, n: n ? n.value : '', v: v ? v.getAttribute('aria-pressed') : null }));
+      localStorage.setItem(saveKey(), JSON.stringify({ s, v: v ? v.getAttribute('aria-pressed') : null }));
     } catch (e) { /* storage blocked: the picks just are not kept */ }
   }
   function restore() {
@@ -812,8 +809,6 @@
       const open = v === '' && document.querySelector(`.seg[data-pick="${p.key}"][data-verdict]`);
       if (p.kind === 'tog' ? typeof v === 'boolean' : open || p.values.includes(v)) state[p.key] = v;
     });
-    const n = document.querySelector('.picks textarea');
-    if (n && typeof d.n === 'string' && !n.value) n.value = d.n;
     const v = document.querySelector('.picks [data-notes]');
     if (v && (d.v === 'true' || d.v === 'false')) v.setAttribute('aria-pressed', d.v);
   }
@@ -892,6 +887,8 @@
   function init() {
     stageOwn();
     wireStats(); wireRound();
+    // Reviewers send picks and say the rest in chat, so an older page's notes box is taken out.
+    $$('.picks textarea').forEach(t => { if (t.id) $$(`label[for="${CSS.escape(t.id)}"]`).forEach(l => l.replaceWith()); t.replaceWith(); });
     // A verdict starts with nothing picked, so an item the reviewer skips stays out of the picks.
     $$('.seg[data-verdict]').forEach(seg => {
       if (!seg.querySelector('button[data-v]')) seg.innerHTML = '<button data-v="keep">Keep</button><button data-v="change">Change</button><button data-v="drop">Drop</button>';
@@ -925,8 +922,6 @@
       if (t.hasAttribute('data-flip')) flipButton(t);
       if (t.hasAttribute('data-notes')) { t.setAttribute('aria-pressed', String(t.getAttribute('aria-pressed') !== 'true')); save(); }
     }, on);
-    const note = document.querySelector('.picks textarea');
-    if (note) note.addEventListener('input', () => { document.querySelector('.picks pre').textContent = picksText(); save(); }, on);
     document.addEventListener('keydown', e => {
       const t = e.target;
       if (t.matches && t.matches('input, textarea, select, [contenteditable]')) { if (e.key === 'Escape') t.blur(); return; }

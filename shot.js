@@ -104,8 +104,8 @@ const url = require('url');
     await q.waitForFunction(() => window.Mock && !document.querySelector('.picks [data-send]').disabled);
     await q.evaluate(() => {
       Mock.pickers().forEach(k => Mock.set(k.key, k.values[k.values.length - 1]));
-      const n = document.querySelector('.picks textarea');
-      if (n) { n.value = 'A long note → × · '.repeat(220); n.dispatchEvent(new Event('input')); }
+      // Long lines from a component, so a page with few picks still sends in parts.
+      Mock.extras.push(() => Array.from({ length: 60 }, (_, i) => `X${i} A long line → × · ${'w'.repeat(40)}`).join('\n'));
     });
     for (let i = 0; i < 20; i++) {
       await q.click('.picks [data-send]');
