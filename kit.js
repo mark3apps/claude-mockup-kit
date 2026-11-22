@@ -324,9 +324,13 @@
       st.style.setProperty('--fit', k);
       const big = k > kFit;
       // Zoomed on a phone, the box keeps a fixed height and scrolls both ways; on the desktop 1:1 scrolls sideways.
-      box.style.height = (phone && big ? Math.min(h * k, Math.max(h * kFit, innerHeight * .5)) : h * k + (big ? 14 : 0)) + 'px';
+      box.style.height = (phone && big ? Math.min(h * k, Math.max(h * kFit, innerHeight * .45)) : h * k + (big ? 14 : 0)) + 'px';
       box.classList.toggle('scroll', big);
       box.classList.toggle('scroll2', phone && big);
+      // A transform leaves the stage's layout box at 1:1, so the zoomed box would scroll on into black past the
+      // scaled stage; negative margins trim the scroll area to what is drawn.
+      st.style.marginRight = phone && big && k < 1 ? `${w * (k - 1)}px` : '';
+      st.style.marginBottom = phone && big && k < 1 ? `${h * (k - 1)}px` : '';
       if (big && k !== was) centerOn(box, st, k);
       const bar = box.previousElementSibling;
       if (bar && bar.classList.contains('stagebar')) {
@@ -343,13 +347,17 @@
   // backdrop and full-stage layers do not count), else to its middle.
   function centerOn(box, st, k) {
     const sr = st.getBoundingClientRect(), f = sr.width / (parseFloat(st.style.getPropertyValue('--w')) || sr.width);
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, big = null;
     [...st.children].forEach(el => {
       if (el.matches('img.bg, canvas, img.hudl, svg.kleads') || !el.getClientRects().length) return;
       const r = el.getBoundingClientRect();
       if (r.width * r.height < 4 || (r.width > sr.width * .9 && r.height > sr.height * .9)) return;
       x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom);
+      if (!big || r.width * r.height > (big.right - big.left) * (big.bottom - big.top)) big = r;
     });
+    // Things at opposite edges would centre on the empty middle: when they do not all fit, take the largest.
+    const zoomOut = k / f;
+    if (big && ((x1 - x0) * zoomOut > box.clientWidth || (y1 - y0) * zoomOut > box.clientHeight)) ({ left: x0, top: y0, right: x1, bottom: y1 } = big);
     const [w, h] = (st.dataset.size || '1440x900').split('x').map(Number);
     const cx = x1 > x0 ? ((x0 + x1) / 2 - sr.left) / f : w / 2, cy = y1 > y0 ? ((y0 + y1) / 2 - sr.top) / f : h / 2;
     box.scrollLeft = cx * k - box.clientWidth / 2;
@@ -418,7 +426,7 @@
     phoneLayout();
     phoneMq.addEventListener('change', () => { phoneLayout(); fit(); layout(); }, on);
     document.addEventListener('focusin', e => {
-      if (!e.target.matches || !e.target.matches('textarea, input[type="text"], input:not([type])')) return;
+      if (!e.target.matches || !e.target.matches('textarea, input[type="text"], input[type="number"], input:not([type])')) return;
       document.body.classList.add('ktyping');
       if (phoneMq.matches) setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350);
     }, on);

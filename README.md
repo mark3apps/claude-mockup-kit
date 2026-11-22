@@ -427,7 +427,6 @@ placeholder left unfilled fails the build. For custom picture work, such as a co
 ## Gotchas
 
 - Check a page as a phone, not only at a narrow width: the Artifact adds `<meta name="viewport" content="width=device-width,initial-scale=1">` when it publishes, so a local check of `page.built.html` in a phone emulator needs that tag added first, or it lays the page out 980 px wide. `shot.js`'s phone shot (390 px wide) covers the layout but not touch sizes.
-
 - A republish to the same artifact swaps the new page into a window the reviewer already has open and runs
   its scripts again. Keep the page's own script inside the template's `(() => { ... })()`, since a
   top-level `const` or `let` throws "already declared" there and the page goes dead. Animate with
