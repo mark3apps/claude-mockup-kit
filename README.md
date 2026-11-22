@@ -81,14 +81,15 @@ Build from these before writing anything new. Markup and script details are unde
 | Picker row | `.controls` (`.sticky`), `.ctl > span` | A labelled row of pickers; sticky keeps it on screen while scrolling |
 | Choice | `.seg[data-pick]` + `button[data-v]` | Pick one of several; each value lands in the copy box as its `data-say` |
 | Toggle | `.tog[data-pick]` | An on/off pick with `data-say-on` / `data-say-off` |
-| Stage | `.stagebox > .stage[data-size]` + `img.bg` | The app's window at 1:1 over a capture, fit to narrow pages, with a VIEW 1:1 bar |
+| Stage | `.stagebox > .stage[data-size]` + `img.bg` | The app's window at 1:1 over a capture, fit to narrow pages, with a VIEW 1:1 bar (on a phone: ZOOM 2×, VIEW 1:1, FIT, centred on what is drawn) |
+| Phone layout | automatic under 700 px wide | The first stage moves above the `.controls` and stays at the top of the screen until the copy box has scrolled past, so a pick and its result show together; typing lets it go. Controls are 44 px high on touch screens, and text fields are 16 px so focusing one does not zoom the page |
 | Conditional | `data-when="k=a,b !t"` | Shows any element only while the picks match |
 | Stage actions | `data-set`, `data-toast`, `data-replay` | In-stage buttons that change picks, flash a line, or restart animations |
 | App look | `@@APP_CSS@@` and the add-on's other placeholders | The app's own classes (`.panel`, `.menubtn`, ...) and icons inside the stage |
 | Notes | `.below > .notes > .note` (`.today`) | One card per option saying what changes; `.today` marks the app as it is |
 | Item | `[data-item="E2"]` (`data-name`) + `{items}` | Every thing the reviewer picks on: a gold label on its heading and a line in the copy box that starts with the label |
 | Asks | `data-asks="more clarify context animate"` on an item | The asks that fit the item: Tell me more, Clarify, Show me in context, Animate. Default `more`; `""` for none |
-| Copy box | `.picks pre[data-format]`, `textarea`, `[data-copy]` | The picks as approval text plus a free note; kept per viewer across a republish |
+| Copy box | `.picks pre[data-format]`, `[data-copy]` | The picks as approval text, kept per viewer across a republish. No notes box: the reviewer sends or copies the picks and says the rest in chat, and the kit takes out an older page's box |
 | Send picks | `.picks .row`: `button.kbtn.send[data-send]`, `button.tog[data-notes]`, COPY | SEND PICKS posts the picks to the publishing thread, saying whether voice notes follow; the reason beside it when it cannot |
 | Answer box | `section.answer > h4` + `ol.steps`, `.tag.done` | Where a thread answers Clarify (steps) or Show me in context on the item, marked CLARIFIED / IN CONTEXT ADDED |
 | Before/after | `.compare[data-before][data-after]` with two `img` | A drag slider between two captures |
@@ -156,7 +157,6 @@ this table and to a starter or an example, and run `./check.sh`.
 
 <div class="picks"><h3>COPY FOR THE CHAT</h3>
   <pre data-format="THING: {layout}; {motion}"></pre>
-  <textarea id="picksNote"></textarea>
   <div class="row"><button class="kbtn send" data-send>SEND PICKS</button><button class="tog" data-notes aria-pressed="true">Voice notes follow in chat</button><button class="kbtn gold" data-copy>COPY</button><span class="ok"></span></div></div>
 
 <div class="note" data-item="A" data-asks="more clarify" data-when="layout=A"><h3>CORNER CARD</h3>   <!-- gets "A" and two asks -->
@@ -176,14 +176,14 @@ this table and to a starter or an example, and run `./check.sh`.
 - `{items}` is the default `data-format`: one line per item that holds picks, `E2 Name: Later`.
   Only `{items}` and `{verdicts}` add labels for you; a custom `data-format` or `Mock.picks` names
   them itself, as in `data-say="layout A"`.
-- SEND PICKS posts `Title · PICKS`, `Mock.text()` (the picks and the note) and whether voice notes
+- SEND PICKS posts `Title · PICKS`, `Mock.text()` (the picks) and whether voice notes
   follow, through the comments capability. It stays disabled, with the reason beside it, until
   `canSendToClaude()` says `available` (checked at load and again at 4 and 12 s, since watching
   sessions are learned late). `sendToClaude` refuses over 4096 bytes of UTF-8 (→ × · are three
   each), so longer picks go in parts on line breaks, one press each, the button reading SEND PART 2
   OF 3; `shot.js` sends the longest picks through a stand-in and fails a part over the limit. A send
   that fails says why and copies its text instead; COPY always works.
-- Picks, the note and the voice-notes toggle are kept in the viewer's localStorage, keyed by the
+- Picks and the voice-notes toggle are kept in the viewer's localStorage, keyed by the
   title, the `h1` and the round banner's `data-round`, so a republish keeps them and a new round
   starts clean.
 - `{verdicts}` in a `data-format` (or `say('verdicts')` in a custom `Mock.picks`) groups every
@@ -196,8 +196,7 @@ this table and to a starter or an example, and run `./check.sh`.
   with the stage's own attributes: `size`, and any `data-*` written on the `.stage` in the markup.
   The page stops with a red bar naming the pick, so rename it (`scale`, `panel-size`).
 - In the copy box, `data-format` splits into items on `;`. Each `{key}` becomes that pick's
-  `data-say` (or its label). An item whose key gives no words is dropped. Any note typed in the box
-  is added on its own line.
+  `data-say` (or its label). An item whose key gives no words is dropped.
 - Inside the stage, `data-set="sit=report rpt=feature"` sets state, which is useful for tabs
   inside the mock. `data-toast="OPENS SETTINGS"` flashes a line, and `data-replay` restarts the stage's
   animations.
@@ -425,6 +424,7 @@ placeholder left unfilled fails the build. For custom picture work, such as a co
 
 ## Gotchas
 
+- Check a page as a phone, not only at a narrow width: the Artifact adds `<meta name="viewport" content="width=device-width,initial-scale=1">` when it publishes, so a local check of `page.built.html` in a phone emulator needs that tag added first, or it lays the page out 980 px wide. `shot.js`'s phone shot (390 px wide) covers the layout but not touch sizes.
 - A republish to the same artifact swaps the new page into a window the reviewer already has open and runs
   its scripts again. Keep the page's own script inside the template's `(() => { ... })()`, since a
   top-level `const` or `let` throws "already declared" there and the page goes dead. Animate with

@@ -106,7 +106,6 @@ kbd { font: 600 11px var(--k-data); border: 1px solid var(--k-line2); border-rad
 .picks h3 { margin: 0; font: 600 12.5px var(--k-data); letter-spacing: 1.5px; color: var(--k-gold); }
 .picks pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 500 13px/1.5 var(--k-data); color: #f1ecff; background: #0b0816; border: 1px solid var(--k-line); border-radius: 6px; padding: 10px 12px; user-select: all; }
 .picks label { font: 600 10px var(--k-data); letter-spacing: 1.5px; color: var(--k-dim); }
-.picks textarea { width: 100%; min-height: 56px; resize: vertical; font: 13px/1.4 var(--k-ui); color: var(--k-ink); background: #0b0816; border: 1px solid var(--k-line); border-radius: 6px; padding: 8px 10px; }
 .picks .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .picks .ok { font: 600 12px var(--k-data); color: var(--k-green); }
 
@@ -248,3 +247,30 @@ button.rchip { cursor: pointer; }
 .tag.rtag { justify-self: start; align-self: center; margin-left: 6px; }
 .k-changed { box-shadow: 0 0 0 1px rgba(62, 224, 255, .45); }
 .k-new { box-shadow: 0 0 0 1px rgba(125, 255, 184, .5); }
+
+/* ---- phones (kit.js wirePhone): the first stage sits above the pickers and stays at the top while the
+   rest scrolls under it; typing lets it go. Every control is a full finger high, and text fields are
+   16px so the browser does not zoom the page when one takes focus. */
+.stagebox.scroll2 { overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+@media (max-width: 700px) {
+  .kphone-sec { display: grid; gap: 14px; min-width: 0; }
+  .kphone-sec > * { min-width: 0; }
+  .kphone-stage {
+    position: sticky; top: 0; z-index: 60; display: grid; gap: 6px;
+    margin: 0 -16px; padding: 8px 16px 10px; padding-top: max(8px, env(safe-area-inset-top, 0px));
+    background: var(--k-page); box-shadow: 0 10px 22px rgba(0, 0, 0, .65);
+  }
+  body.ktyping .kphone-stage { position: static; box-shadow: none; }
+  .controls { gap: 10px 16px; padding: 10px 12px; }
+  .controls.sticky { position: static; box-shadow: none; }
+  .page { gap: 14px; }
+  .page h1 { font-size: 19px; letter-spacing: 3px; }
+  .lede { font-size: 14px; }
+  .stagebar { font-size: 9.5px; letter-spacing: 1.5px; }
+  .page textarea, .page input[type="text"], .page input:not([type]), .page input[type="number"] { font-size: 16px; }
+}
+@media (pointer: coarse) {
+  .seg button, .tog, .kbtn, .kask { min-height: 44px; padding: 10px 14px; font-size: 13.5px; }
+  .seg { gap: 8px; }
+  .stagebar .kbtn { min-height: 36px; padding: 6px 12px; font-size: 11px; }
+}
