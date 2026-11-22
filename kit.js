@@ -303,7 +303,14 @@
     listeners.forEach(fn => fn(state, 'replay'));
   }
 
+  // On a phone the whole stage fits a ~360 px column at about a quarter size, too small to judge a mock-up,
+  // so the stage bar zooms it in place (2x, then 1:1) and the box scrolls round it. The desktop keeps
+  // FIT / VIEW 1:1.
+  const phoneMq = matchMedia('(max-width: 700px)');
+  const PHONE_ZOOM = 2;
   function fit() {
+    const phone = phoneMq.matches;
+    if (!phone && fitMode === 'zoom') fitMode = 'auto';
     $$('.stagebox').forEach(box => {
       const st = box.querySelector('.stage');
       if (!st) return;
@@ -311,18 +318,42 @@
       st.style.setProperty('--w', w + 'px'); st.style.setProperty('--h', h + 'px');
       $$('canvas.fx, canvas.fxtop', st).forEach(c => { if (!c.hasAttribute('width')) { c.width = w; c.height = h; } });
       const room = box.clientWidth;
-      const k = fitMode === 'real' ? 1 : Math.min(1, room / w);
+      const kFit = Math.min(1, room / w);
+      const k = fitMode === 'real' ? 1 : fitMode === 'zoom' ? Math.min(1, kFit * PHONE_ZOOM) : kFit;
+      const was = parseFloat(st.style.getPropertyValue('--fit')) || kFit;
       st.style.setProperty('--fit', k);
-      box.style.height = (h * k + (fitMode === 'real' && room < w ? 14 : 0)) + 'px';
-      box.classList.toggle('scroll', fitMode === 'real' && room < w);
+      const big = k > kFit;
+      // Zoomed on a phone, the box keeps a fixed height and scrolls both ways; on the desktop 1:1 scrolls sideways.
+      box.style.height = (phone && big ? Math.min(h * k, Math.max(h * kFit, innerHeight * .5)) : h * k + (big ? 14 : 0)) + 'px';
+      box.classList.toggle('scroll', big);
+      box.classList.toggle('scroll2', phone && big);
+      if (big && k !== was) centerOn(box, st, k);
       const bar = box.previousElementSibling;
       if (bar && bar.classList.contains('stagebar')) {
         bar.querySelector('span').textContent = `${w} × ${h} · ` + (k < 1 ? `SHOWN AT ${Math.round(k * 100)}%` : 'SHOWN 1:1, REAL SIZE');
         const btn = bar.querySelector('button');
         btn.hidden = room >= w;
-        btn.textContent = fitMode === 'real' ? 'FIT TO PAGE' : 'VIEW 1:1';
+        btn.textContent = !phone ? (fitMode === 'real' ? 'FIT TO PAGE' : 'VIEW 1:1')
+          : fitMode === 'auto' && kFit * PHONE_ZOOM < 1 ? `ZOOM ${PHONE_ZOOM}×` : fitMode === 'real' ? 'FIT' : 'VIEW 1:1';
       }
     });
+  }
+
+  // Scrolls a zoomed stage to the middle of what is drawn on it (its mock panels, items and words; the
+  // backdrop and full-stage layers do not count), else to its middle.
+  function centerOn(box, st, k) {
+    const sr = st.getBoundingClientRect(), f = sr.width / (parseFloat(st.style.getPropertyValue('--w')) || sr.width);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    [...st.children].forEach(el => {
+      if (el.matches('img.bg, canvas, img.hudl, svg.kleads') || !el.getClientRects().length) return;
+      const r = el.getBoundingClientRect();
+      if (r.width * r.height < 4 || (r.width > sr.width * .9 && r.height > sr.height * .9)) return;
+      x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom);
+    });
+    const [w, h] = (st.dataset.size || '1440x900').split('x').map(Number);
+    const cx = x1 > x0 ? ((x0 + x1) / 2 - sr.left) / f : w / 2, cy = y1 > y0 ? ((y0 + y1) / 2 - sr.top) / f : h / 2;
+    box.scrollLeft = cx * k - box.clientWidth / 2;
+    box.scrollTop = cy * k - box.clientHeight / 2;
   }
 
   function wireStagebars() {
@@ -331,9 +362,67 @@
       const bar = document.createElement('div');
       bar.className = 'stagebar';
       bar.innerHTML = '<span></span><button class="kbtn" type="button"></button>';
-      bar.querySelector('button').onclick = () => { fitMode = fitMode === 'real' ? 'auto' : 'real'; fit(); };
+      bar.querySelector('button').onclick = () => {
+        if (!phoneMq.matches) fitMode = fitMode === 'real' ? 'auto' : 'real';
+        else {
+          const st = box.querySelector('.stage'), w = +(st.dataset.size || '1440x900').split('x')[0];
+          const canZoom = Math.min(1, box.clientWidth / w) * PHONE_ZOOM < 1;
+          fitMode = fitMode === 'auto' ? (canZoom ? 'zoom' : 'real') : fitMode === 'zoom' ? 'real' : 'auto';
+        }
+        fit();
+      };
       box.before(bar);
     });
+  }
+
+  // Phones: the first stage moves above the pickers and stays at the top of the screen while the pickers,
+  // notes and copy box scroll under it, so a pick and its result are on screen together. It lets go after
+  // the copy box (the stage, pickers and everything to the copy box share one section, the sticky's
+  // reach), and while typing, so the keyboard does not leave the note box under it. A wider screen puts
+  // every moved node back where it was.
+  let phoneMoved = null;
+  function phoneLayout() {
+    const box = document.querySelector('.stagebox');
+    const ctl = document.querySelector('.controls');
+    if (phoneMq.matches && !phoneMoved && box && ctl && ctl.parentElement && (ctl.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+      const prev = box.previousElementSibling;
+      const bar = prev && prev.classList.contains('stagebar') ? prev : null;
+      // The section runs from the pickers to the sibling that holds the copy box (else the stage's own).
+      const sibs = [...ctl.parentElement.children];
+      const from = sibs.indexOf(ctl);
+      const holds = el => el.contains(box) || el.querySelector('.picks') || el.matches('.picks');
+      let to = -1;
+      sibs.forEach((el, i) => { if (i >= from && (el.matches('.picks') || el.querySelector('.picks'))) to = to < 0 ? i : to; });
+      if (to < 0) sibs.forEach((el, i) => { if (i >= from && holds(el)) to = i; });
+      if (to < from) to = from;
+      phoneMoved = [];
+      const mark = node => { const c = document.createComment('k'); node.before(c); phoneMoved.push([node, c]); };
+      const sec = document.createElement('div');
+      sec.className = 'kphone-sec';
+      const wrap = document.createElement('div');
+      wrap.className = 'kphone-stage';
+      ctl.before(sec);
+      sec.append(wrap);
+      if (bar) { mark(bar); wrap.append(bar); }
+      mark(box); wrap.append(box);
+      sibs.slice(from, to + 1).forEach(el => { if (el !== box && el !== bar && el.isConnected) { mark(el); sec.append(el); } });
+    } else if (!phoneMq.matches && phoneMoved) {
+      const sec = document.querySelector('.kphone-sec');
+      phoneMoved.forEach(([node, c]) => c.replaceWith(node));
+      phoneMoved = null;
+      if (sec) sec.replaceWith();
+    }
+    document.body.classList.toggle('kphone', phoneMq.matches);
+  }
+  function wirePhone() {
+    phoneLayout();
+    phoneMq.addEventListener('change', () => { phoneLayout(); fit(); layout(); }, on);
+    document.addEventListener('focusin', e => {
+      if (!e.target.matches || !e.target.matches('textarea, input[type="text"], input:not([type])')) return;
+      document.body.classList.add('ktyping');
+      if (phoneMq.matches) setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350);
+    }, on);
+    document.addEventListener('focusout', () => document.body.classList.remove('ktyping'), on);
   }
 
   // .inset.live copies the stage's picture layers (img.bg, canvas.fx, img.hudl, canvas.fxtop, as
@@ -838,7 +927,7 @@
       if (fn) { e.preventDefault(); fn(e); }
     }, on);
     wireItems(); wireFlips();
-    wireStagebars(); wireCompare(); wireStills(); wireInsets(); wireSend();
+    wireStagebars(); wirePhone(); wireCompare(); wireStills(); wireInsets(); wireSend();
     addEventListener('resize', fit, on); fit();
     $$('.stage > img.hudl').forEach(i => { if (!i.complete) i.addEventListener('load', layout, on); });
     if (document.fonts) document.fonts.ready.then(() => { if (!run.signal.aborted) layout(); });

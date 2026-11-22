@@ -81,7 +81,8 @@ Build from these before writing anything new. Markup and script details are unde
 | Picker row | `.controls` (`.sticky`), `.ctl > span` | A labelled row of pickers; sticky keeps it on screen while scrolling |
 | Choice | `.seg[data-pick]` + `button[data-v]` | Pick one of several; each value lands in the copy box as its `data-say` |
 | Toggle | `.tog[data-pick]` | An on/off pick with `data-say-on` / `data-say-off` |
-| Stage | `.stagebox > .stage[data-size]` + `img.bg` | The app's window at 1:1 over a capture, fit to narrow pages, with a VIEW 1:1 bar |
+| Stage | `.stagebox > .stage[data-size]` + `img.bg` | The app's window at 1:1 over a capture, fit to narrow pages, with a VIEW 1:1 bar (on a phone: ZOOM 2×, VIEW 1:1, FIT, centred on what is drawn) |
+| Phone layout | automatic under 700 px wide | The first stage moves above the `.controls` and stays at the top of the screen until the copy box has scrolled past, so a pick and its result show together; typing lets it go. Controls are 44 px high on touch screens, and text fields are 16 px so focusing one does not zoom the page |
 | Conditional | `data-when="k=a,b !t"` | Shows any element only while the picks match |
 | Stage actions | `data-set`, `data-toast`, `data-replay` | In-stage buttons that change picks, flash a line, or restart animations |
 | App look | `@@APP_CSS@@` and the add-on's other placeholders | The app's own classes (`.panel`, `.menubtn`, ...) and icons inside the stage |
@@ -424,6 +425,8 @@ placeholder left unfilled fails the build. For custom picture work, such as a co
 `from build import uri` in your own script.
 
 ## Gotchas
+
+- Check a page as a phone, not only at a narrow width: the Artifact adds `<meta name="viewport" content="width=device-width,initial-scale=1">` when it publishes, so a local check of `page.built.html` in a phone emulator needs that tag added first, or it lays the page out 980 px wide. `shot.js`'s phone shot (390 px wide) covers the layout but not touch sizes.
 
 - A republish to the same artifact swaps the new page into a window the reviewer already has open and runs
   its scripts again. Keep the page's own script inside the template's `(() => { ... })()`, since a
