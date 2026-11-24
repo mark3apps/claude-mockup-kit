@@ -2,12 +2,13 @@
 <title>Kit Components</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <!-- The newer components on one page, with no captures: a round banner, a player driving a drawn
-     stage, a live close-up following the ship, and a stat table with a pick per row.
+     stage with a scrolling log, a live close-up following the ship, and a stat table with a pick per row.
      Build: python3 $KIT/build.py page.html -->
 <style>
 @@KIT_CSS@@
 .page { max-width: 1200px; }
 .stage { background: radial-gradient(80% 80% at 30% 40%, #120c24, #05040b 70%); }
+.log { position: absolute; right: 24px; bottom: 40px; width: 260px; height: 200px; overflow: auto; margin: 0; padding: 8px 12px; list-style: none; background: rgba(8, 6, 18, .85); border: 1px solid var(--k-line); border-radius: 6px; font: 500 13px/22px var(--k-data); color: #cfe6ff; }
 .duo { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
 @media (max-width: 860px) { .duo { grid-template-columns: minmax(0, 1fr); } }
 </style>
@@ -18,7 +19,7 @@
 
   <h2>A MOVE, PLAYED</h2>
   <div class="duo">
-    <div><div class="stagebox"><div class="stage" data-size="1440x900"><canvas class="fx" id="fx"></canvas></div></div></div>
+    <div><div class="stagebox"><div class="stage" data-size="1440x900"><canvas class="fx" id="fx"></canvas><ol class="log" id="log"></ol></div></div></div>
     <div class="note" data-item="M1" data-asks="more context"><h3>DRIFT TURN</h3>
       <p class="hint">The ship swings wide round the sun and settles into a lap. Play it, or drag the bar.</p>
       <div class="inset live" data-at="720,450" data-zoom="5" data-size="720x420" id="close"><span class="cap">5× CLOSER, LIVE</span></div>
@@ -50,6 +51,8 @@
 (() => {
 const fx = document.getElementById('fx');
 const close = document.getElementById('close');
+// More lines than the log shows: the ones scrolled out of it must not read as off the stage.
+document.getElementById('log').replaceChildren(...Array.from({ length: 24 }, (_, i) => Object.assign(document.createElement('li'), { textContent: `T+${(i * 0.5).toFixed(1).padStart(4, '0')}s  lap ${i + 1} logged` })));
 const SUN = [720, 450];
 // Where the ship is t seconds in: a wide swing that settles onto a 260 px lap.
 function at(t) {
