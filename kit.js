@@ -188,7 +188,7 @@
       const el = n.parentElement;
       if (!el || el.closest('style, script, .ktoast') || !shown(el)) continue;
       const grp = groupOf(st, el);
-      if (el.closest('svg')) { const r = el.getBoundingClientRect(); if (r.width > .5) out.push({ box: boxIn(st, r), el, grp }); continue; }
+      if (el.closest('svg')) { const r = clipped(st, el, el.getBoundingClientRect()); if (r.width > .5 && r.height > .5) out.push({ box: boxIn(st, r), el, grp }); continue; }
       const rg = document.createRange(); rg.selectNodeContents(n);
       [...rg.getClientRects()].forEach(r0 => { const r = clipped(st, el, r0); if (r.width > .5 && r.height > .5) out.push({ box: boxIn(st, r), el, grp }); });
     }
