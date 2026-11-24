@@ -168,6 +168,19 @@
     return el;
   }
 
+  // What a scrolling or clipping ancestor leaves of a rect: words scrolled out of a list are not on show.
+  function clipped(st, el, r) {
+    let [x0, y0, x1, y1] = [r.left, r.top, r.right, r.bottom];
+    for (let a = el; a && a !== st; a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+      const b = a.getBoundingClientRect();
+      if (cs.overflowX !== 'visible') { x0 = Math.max(x0, b.left); x1 = Math.min(x1, b.right); }
+      if (cs.overflowY !== 'visible') { y0 = Math.max(y0, b.top); y1 = Math.min(y1, b.bottom); }
+    }
+    return { left: x0, top: y0, right: x1, bottom: y1, width: x1 - x0, height: y1 - y0 };
+  }
+
   function texts(st) {
     const out = [];
     const w = document.createTreeWalker(st, NodeFilter.SHOW_TEXT, { acceptNode: n => (n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
@@ -177,7 +190,7 @@
       const grp = groupOf(st, el);
       if (el.closest('svg')) { const r = el.getBoundingClientRect(); if (r.width > .5) out.push({ box: boxIn(st, r), el, grp }); continue; }
       const rg = document.createRange(); rg.selectNodeContents(n);
-      [...rg.getClientRects()].forEach(r => { if (r.width > .5 && r.height > .5) out.push({ box: boxIn(st, r), el, grp }); });
+      [...rg.getClientRects()].forEach(r0 => { const r = clipped(st, el, r0); if (r.width > .5 && r.height > .5) out.push({ box: boxIn(st, r), el, grp }); });
     }
     return out;
   }
