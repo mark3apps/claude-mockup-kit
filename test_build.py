@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 import build
+import stage_css
 
 
 def addon(path, body):
@@ -80,6 +81,26 @@ class Addons(unittest.TestCase):
         addon(self.root / 'app/.claude/mockup-addon.py', "PLACEHOLDERS = {'X': lambda a, b: 'x'}\n")
         self.page('app/part.css', 'a{@@X@@}')
         self.assertEqual(build.build(self.page('app/page.html', '@@FILE:part.css@@')), 'a{x}')
+
+
+class StageCss(unittest.TestCase):
+    def test_root_height_does_not_size_the_stage(self):
+        # Report #77: a board's own `html, body { height: 100% }` made the stage the scaled box's height.
+        css = stage_css.scoped(
+            'html, body { height: 100%; margin: 0; }\n'
+            ':root { min-height: 100vh; line-height: 1.4; --height: 3px; }\n'
+            'body.dark, .panel { height: 50vh; color: red; }\n'
+            'body .card { min-height: 10px; }\n'
+            'html { height: 100% }\n'
+        )
+        self.assertIn('.stage,.stage{ margin: 0; }', css)
+        self.assertIn('line-height: 1.4', css)
+        self.assertIn('--height: 3px', css)
+        self.assertIn('.stage.dark{ color: red; }', css)
+        self.assertIn('.stage .panel{ height: 450px; color: red; }', css)
+        self.assertIn('.stage .card{ min-height: 10px; }', css)
+        stage = [r for r in css.splitlines() if r.split('{')[0].split(',')[0] in ('.stage', '.stage.dark')]
+        self.assertEqual([r for r in stage if 'height:' in r.replace('line-height', '').replace('--height', '')], [])
 
 
 if __name__ == '__main__':
