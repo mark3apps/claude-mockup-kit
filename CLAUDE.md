@@ -9,8 +9,11 @@ page; this file is for changing the kit itself.
 - Pages run as published Artifacts and may run their scripts twice (a republish into an open
   window): keep page code inside `(() => { ... })()`, animate with `Mock.frame`, and build DOM with
   `createElement`/`replaceChildren`, never `innerHTML` with data.
-- Before a PR, run `./check.sh`: the add-on tests, then every starter and example built and checked
-  by `shot.js`. Look at the screenshots it prints the folder of for anything you changed.
-- A new component goes in the README's Components table and in a starter or an example, so
-  `check.sh` covers it.
+- Before a PR, run `./check.sh`: the add-on tests, then every starter and example built through pagekit and
+  checked by `shot.js`, standalone and hosted. Look at the screenshots it prints the folder of for anything you changed.
+- A new component is a `pagekit.py` method, a row in the README's Components table naming it, and a
+  use in a starter or an example, so `check.sh` covers it standalone and hosted.
+- Hosted (framed by a board, README: Hosted pages) the page has no storage and no same origin; its
+  messages to the board are a contract the board's viewer relies on, so change them with that viewer.
+- The `.html` starters are written by the `.py` ones: change the `.py`, then `python3 X.py --out X.html`.
 - Projects run `main` straight from their clone, so a merge is a release: keep `main` building.

@@ -8,6 +8,11 @@ Labels on the page must match the words in the copy box, so a pasted or sent pic
 the build. The kit also has starters for pages with no stage: a size lineup, a cost chart and a perf
 comparison.
 
+Pages are built with `pagekit.py`: one function per component, so a page is a short Python script
+(`make.py`) and never hand-written HTML. The drawn mock inside a stage is the one place a page writes
+markup (`stage.mock`). The same script writes the standalone page that `build.py` and `shot.js`
+check, and the hosted content a review board frames (Hosted pages).
+
 ## Using it in a Claude project
 
 Attach this repo to the Claude project as a second repo, beside the app's own. Every thread then has
@@ -44,7 +49,7 @@ set but empty means none) name the add-ons outright. With neither, `build.py` ta
 beside the kit's clone (`/home/user/*/`); the first to define a name wins, and a clash prints a
 warning (pass `--addon` to choose). An add-on is Python and runs at build time: only clone repos
 you trust beside the kit. `@@APP_CSS@@` is the one name the kit's own pages use; without an add-on it
-gives `standin.css`, so `template.html` builds anywhere. `stage_css.scoped(css)` prefixes every rule
+gives `standin.css`, so the template builds anywhere. `stage_css.scoped(css)` prefixes every rule
 with `.stage`, turns `:root`/`html`/`body` into the stage, keeps `@keyframes` and `@media`, drops
 `@font-face`, and rewrites `vw`/`vh` against the stage size. The page palette is `kit.css`'s
 `--k-*` variables; an add-on can return a `:root { --k-... }` block to restyle it.
@@ -53,10 +58,13 @@ with `.stage`, turns `:root`/`html`/`body` into the stage, keeps `@keyframes` an
 
 | File | What it is |
 |---|---|
-| `template.html` | The starter page. Copy it, then fill in every part marked EDIT |
-| `perf.html` + `perf.css` + `perf.js` | The starter page for a perf comparison: fps and frame times before and after a fix, against a frame-rate floor and aim (see Perf pages) |
-| `sizes.html` + `sizes.css` + `sizes.js` | The starter page for a size lineup: every item at true world scale, resizable, the changes sent as picks (see Size lineups) |
-| `costs.html` + `costs.css` + `costs.js` | The starter page for a cost chart: prices as bars split by resource and part, every number editable on the chart (see Cost charts) |
+| `pagekit.py` | The builder: `Page` and one method per component (Components), `save`, `bundle`, `publish`, `cli` |
+| `template.py` | The starter page. Copy it as `make.py`, then fill in every part marked EDIT |
+| `perf.py` + `perf.css` + `perf.js` | The starter page for a perf comparison: fps and frame times before and after a fix, against a frame-rate floor and aim (see Perf pages) |
+| `sizes.py` + `sizes.css` + `sizes.js` | The starter page for a size lineup: every item at true world scale, resizable, the changes sent as picks (see Size lineups) |
+| `costs.py` + `costs.css` + `costs.js` | The starter page for a cost chart: prices as bars split by resource and part, every number editable on the chart (see Cost charts) |
+| `template.html`, `perf.html`, `sizes.html`, `costs.html` | What each starter writes (`python3 template.py --out template.html`); `check.sh` fails when one is stale |
+| `hosted.py` | Stdlib only: `frame(content, base)` turns hosted content into the document a board frames |
 | `kit.css` | The page around the stage (pickers, notes, copy box, compare slider, stills, pitch cards) |
 | `kit.js` | Reads the markup and runs the pickers, `data-when`, the copy box and the stage fit. Exposes `window.Mock` |
 | `build.py` | Inlines the kit, the add-ons' placeholders and the pictures into one HTML file |
@@ -64,52 +72,54 @@ with `.stage`, turns `:root`/`html`/`body` into the stage, keeps `@keyframes` an
 | `standin.css` | What `@@APP_CSS@@` gives without an add-on |
 | `hudsplit.py` | Lifts the HUD off a capture into its own transparent picture, from a capture with the HUD and one without |
 | `strip.py` | Stacks recorded frames into one tall picture for a flipbook |
-| `check.sh` | Builds every starter and example and runs `shot.js` on each, plus the add-on tests: run it before a kit PR |
-| `shot.js` | Checks a built page in Playwright: clicks every pick, shoots the stage, flags errors, sideways scroll and a page missing the review standard |
-| `examples/pitch/` | Two pitch cards with Build / Later / No verdicts; needs no captures |
-| `examples/components/` | A round banner, a player driving a drawn stage, a live close-up and a stat table; needs no captures |
-| `examples/sizes/` | A size lineup of four made-up sprites |
-| `examples/perf/` | The perf starter over made-up frame logs |
+| `check.sh` | Builds every starter and example through pagekit and runs `shot.js` on each, standalone and hosted, plus the tests: run it before a kit PR |
+| `shot.js` | Checks a built page in Playwright: clicks every pick, shoots the stage, flags errors, sideways scroll and a page missing the review standard; `--hosted` checks a framed page's messages |
+| `examples/pitch/make.py` | Two pitch cards with Build / Later / No verdicts; needs no captures |
+| `examples/components/make.py` | A round banner, columns, a player driving a drawn stage, a live close-up and a stat table; needs no captures |
+| `examples/sizes/` | Four made-up sprites the `sizes.py` starter is checked over |
+| `examples/perf/` | Made-up frame logs the `perf.py` starter is checked over |
 
 ## Components
 
 Build from these before writing anything new. Markup and script details are under Markup below.
 
-| Component | Hook | What it gives you |
-|---|---|---|
-| Page chrome | `.page`, `h1 small`, `h2`, `.lede`, `kbd` | Title, section heads and the intro paragraph in the kit's palette |
-| Picker row | `.controls` (`.sticky`), `.ctl > span` | A labelled row of pickers; sticky keeps it on screen while scrolling |
-| Choice | `.seg[data-pick]` + `button[data-v]` | Pick one of several; each value lands in the copy box as its `data-say` |
-| Toggle | `.tog[data-pick]` | An on/off pick with `data-say-on` / `data-say-off` |
-| Stage | `.stagebox > .stage[data-size]` + `img.bg` | The app's window at 1:1 over a capture, fit to narrow pages, with a VIEW 1:1 bar (on a phone: ZOOM 2×, VIEW 1:1, FIT, centred on what is drawn) |
-| Phone layout | automatic under 700 px wide | The first stage moves above the `.controls` and stays at the top of the screen until the copy box has scrolled past, so a pick and its result show together; typing lets it go. Controls are 44 px high on touch screens, and text fields are 16 px so focusing one does not zoom the page |
-| Conditional | `data-when="k=a,b !t"` | Shows any element only while the picks match |
-| Stage actions | `data-set`, `data-toast`, `data-replay` | In-stage buttons that change picks, flash a line, or restart animations |
-| App look | `@@APP_CSS@@` and the add-on's other placeholders | The app's own classes (`.panel`, `.menubtn`, ...) and icons inside the stage |
-| Notes | `.below > .notes > .note` (`.today`) | One card per option saying what changes; `.today` marks the app as it is |
-| Item | `[data-item="E2"]` (`data-name`) + `{items}` | Every thing the reviewer picks on: a gold label on its heading and a line in the copy box that starts with the label |
-| Asks | `data-asks="more clarify context animate"` on an item | The asks that fit the item: Tell me more, Clarify, Show me in context, Animate. Default `more`; `""` for none |
-| Copy box | `.picks pre[data-format]`, `[data-copy]` | The picks as approval text, kept per viewer across a republish. No notes box: the reviewer sends or copies the picks and says the rest in chat, and the kit takes out an older page's box |
-| Send picks | `.picks .row`: `button.kbtn.send[data-send]`, `button.tog[data-notes]`, COPY | SEND PICKS posts the picks to the publishing thread, saying whether voice notes follow; the reason beside it when it cannot |
-| Answer box | `section.answer > h4` + `ol.steps`, `.tag.done` | Where a thread answers Clarify (steps) or Show me in context on the item, marked CLARIFIED / IN CONTEXT ADDED |
-| Before/after | `.compare[data-before][data-after]` with two `img` | A drag slider between two captures |
-| Stills | `.stills > figure > img[data-full]` | A gallery that opens each still at 1:1 |
-| World effect layers | `.bg` bare, `canvas.fx`, `img.hudl`, `canvas.fxtop` | An effect drawn into the world under the real HUD, and anything over it; see World effects |
-| Pitch card | `.pitches > article.pitch` (`.art`, `.body`, `.tag.rec/.big`, `.one`, `dl`, `dt.q`, `.pickrow`) | One idea per card for a feature pitch: a picture beside What/How/Get rows and an open question |
-| Verdict | `.seg[data-verdict]` (empty: Keep / Change / Drop; or your own buttons, as Build / Later / No) | A pick per item that starts unpicked; pressing the picked one again clears it. `{verdicts}` groups them as "Build A, B. Later C." |
-| Inset | `.inset[data-at="x,y"][data-zoom]` + `img`, optional `canvas.fx`, `.cap` | A close-up of a capture round one spot (a small thing is a few pixels at 1:1), with a caption and room to draw over it |
-| Live close-up | `.inset.live[data-at][data-zoom]` (`data-stage`) | The same close-up of an animated stage, redrawn every frame; move `data-at` to follow something |
-| Player | `Mock.player(el, { length, speeds, phases, draw })` | Play once to the end, pause, speeds, a scrub bar and a caption per phase for a scripted animation |
-| Flipbook | `.flip[data-src][data-frames][data-fps]` | Real frames of the app (`strip.py`) played once at their own rate, with pause and step; Animate on its item plays it |
-| Stat table | `table.stats` (`data-pick-rows`), `tr[data-item]`, `td[data-was]` | Numbers with yours beside the new values, changed cells marked, a label, pick and asks per row |
-| Round banner | `.round[data-round][data-changed][data-new][data-dropped]` | What changed since the last round by label; each label jumps to its item, which gets a CHANGED / NEW tag |
-| Bars | `.bars > .row` (`span`, `.bar > i[style="--v:50%"]`, `b`) | One number compared across options, a row each; `.bars.good` turns the bars green |
-| Perf comparison | `perf.html`: `script#perf` JSON, `script.perflog`, `script.perfpasses` | Every scene's before → after on one axis, one scene's runs frame by frame, and the ms each pass costs; see Perf pages |
-| Size lineup | `sizes.html`: `script#sizes` JSON from the project's sprite baker | Every item at true scale in group rows, pan and zoom, a dock to resize one, reference lines, and the changes as picks; see Size lineups |
-| Cost chart | `.costchart[data-src=ID]` (`data-item`) + `script#ID` JSON | A price per row as a bar split by resource and part, grouped by tier, with drag handles, a chip palette, salvage squares, zoom and an editor; the changes are the picks; see Cost charts |
-| Real sprites | `Mock.sprite(ctx, sprite, x, y, angle, len)`, `Mock.sprites(list)` | The app's own pictures drawn on any canvas from `sprites.json`, instead of copied drawing code that drifts from the app |
-| Words over the world | `.wtag[data-anchor="x,y"]` (`data-leader`, `data-prefer`, `data-gap`, `--c`), `Mock.ship`, `Mock.keep`, `data-keepout`, `[data-keep]` | A name or note on a dark plate, placed clear of moving things, the HUD and other words; see Readable words |
-| Keys and hooks | `Mock.on/set/keys/toast/replay/text/picks/extras/frame/layout/overlaps/player` | Script for behaviour the markup cannot express |
+| Component | pagekit | Hook | What it gives you |
+|---|---|---|---|
+| Page chrome | `Page(title, round, sub)`, `lede`, `h2`, `hint` | `.page`, `h1 small`, `h2`, `.lede`, `kbd` | Title, section heads and the intro paragraph in the kit's palette |
+| Picker row | `controls(sticky)` | `.controls` (`.sticky`), `.ctl > span` | A labelled row of pickers; sticky keeps it on screen while scrolling |
+| Choice | `controls().choice(key, label, options)` | `.seg[data-pick]` + `button[data-v]` | Pick one of several; each value lands in the copy box as its `data-say` |
+| Toggle | `controls().toggle(key, label, words)` | `.tog[data-pick]` | An on/off pick with `data-say-on` / `data-say-off` |
+| Stage | `stage(size)`, `.bg(path)` | `.stagebox > .stage[data-size]` + `img.bg` | The app's window at 1:1 over a capture, fit to narrow pages, with a VIEW 1:1 bar (on a phone: ZOOM 2×, VIEW 1:1, FIT, centred on what is drawn) |
+| Phone layout | (automatic) | automatic under 700 px wide | The first stage moves above the `.controls` and stays at the top of the screen until the copy box has scrolled past, so a pick and its result show together; typing lets it go. Controls are 44 px high on touch screens, and text fields are 16 px so focusing one does not zoom the page |
+| Conditional | `when=` on every function | `data-when="k=a,b !t"` | Shows any element only while the picks match |
+| Stage actions | `stage.action(words, set, toast, replay)` | `data-set`, `data-toast`, `data-replay` | In-stage buttons that change picks, flash a line, or restart animations |
+| App look | `Page(app_css=True)`, `stage.mock(markup)` | `@@APP_CSS@@` and the add-on's other placeholders | The app's own classes (`.panel`, `.menubtn`, ...) and icons inside the stage |
+| Notes | `item(label, name, points)` | `.below > .notes > .note` (`.today`) | One card per option saying what changes; `.today` marks the app as it is |
+| Item | `item`, `pitch`, `stats` rows | `[data-item="E2"]` (`data-name`) + `{items}` | Every thing the reviewer picks on: a gold label on its heading and a line in the copy box that starts with the label |
+| Asks | `asks=` on `item`, `pitch`, `stats` rows | `data-asks="more clarify context animate"` on an item | The asks that fit the item: Tell me more, Clarify, Show me in context, Animate. Default `more`; `""` for none |
+| Copy box | `picks(format)` | `.picks pre[data-format]`, `[data-copy]` | The picks as approval text, kept per viewer across a republish. No notes box: the reviewer sends or copies the picks and says the rest in chat, and the kit takes out an older page's box |
+| Send picks | `picks()` | `.picks .row`: `button.kbtn.send[data-send]`, `button.tog[data-notes]`, COPY | SEND PICKS posts the picks to the publishing thread, saying whether voice notes follow; the reason beside it when it cannot |
+| Answer box | `answer(item, title, steps, tag)` | `section.answer > h4` + `ol.steps`, `.tag.done` | Where a thread answers Clarify (steps) or Show me in context on the item, marked CLARIFIED / IN CONTEXT ADDED |
+| Before/after | `compare(before, after, labels)` | `.compare[data-before][data-after]` with two `img` | A drag slider between two captures |
+| Stills | `stills(shots)` | `.stills > figure > img[data-full]` | A gallery that opens each still at 1:1 |
+| World effect layers | `stage.bg`, `stage.layer(kind)`, `stage.hud(path)` | `.bg` bare, `canvas.fx`, `img.hudl`, `canvas.fxtop` | An effect drawn into the world under the real HUD, and anything over it; see World effects |
+| Pitch card | `pitch(label, name, one, rows, art, tags, question)` | `.pitches > article.pitch` (`.art`, `.body`, `.tag.rec/.big`, `.one`, `dl`, `dt.q`, `.pickrow`) | One idea per card for a feature pitch: a picture beside What/How/Get rows and an open question |
+| Verdict | `verdict=` on `item`, `pitch` | `.seg[data-verdict]` (empty: Keep / Change / Drop; or your own buttons, as Build / Later / No) | A pick per item that starts unpicked; pressing the picked one again clears it. `{verdicts}` groups them as "Build A, B. Later C." |
+| Inset | `inset(shot, at, zoom, size, cap)` | `.inset[data-at="x,y"][data-zoom]` + `img`, optional `canvas.fx`, `.cap` | A close-up of a capture round one spot (a small thing is a few pixels at 1:1), with a caption and room to draw over it |
+| Live close-up | `inset(at=..., live=True)` | `.inset.live[data-at][data-zoom]` (`data-stage`) | The same close-up of an animated stage, redrawn every frame; move `data-at` to follow something |
+| Player | `player(id, length, speeds, phases, draw)` | `Mock.player(el, { length, speeds, phases, draw })` | Play once to the end, pause, speeds, a scrub bar and a caption per phase for a scripted animation |
+| Flipbook | `flip(strip, frames, fps)` | `.flip[data-src][data-frames][data-fps]` | Real frames of the app (`strip.py`) played once at their own rate, with pause and step; Animate on its item plays it |
+| Stat table | `stats(head, rows, pick_rows)` | `table.stats` (`data-pick-rows`), `tr[data-item]`, `td[data-was]` | Numbers with yours beside the new values, changed cells marked, a label, pick and asks per row |
+| Round banner | `round(changed, new, dropped, words)` | `.round[data-round][data-changed][data-new][data-dropped]` | What changed since the last round by label; each label jumps to its item, which gets a CHANGED / NEW tag |
+| Bars | `bars(rows, good)`, `bars=` on `pitch` | `.bars > .row` (`span`, `.bar > i[style="--v:50%"]`, `b`) | One number compared across options, a row each; `.bars.good` turns the bars green |
+| Perf comparison | `perf(data, logs, passes)` | `perf.html`: `script#perf` JSON, `script.perflog`, `script.perfpasses` | Every scene's before → after on one axis, one scene's runs frame by frame, and the ms each pass costs; see Perf pages |
+| Size lineup | `sizes(words, sprites)` | `sizes.html`: `script#sizes` JSON from the project's sprite baker | Every item at true scale in group rows, pan and zoom, a dock to resize one, reference lines, and the changes as picks; see Size lineups |
+| Cost chart | `costs(data, item)` | `.costchart[data-src=ID]` (`data-item`) + `script#ID` JSON | A price per row as a bar split by resource and part, grouped by tier, with drag handles, a chip palette, salvage squares, zoom and an editor; the changes are the picks; see Cost charts |
+| Real sprites | `sprites(path)` | `Mock.sprite(ctx, sprite, x, y, angle, len)`, `Mock.sprites(list)` | The app's own pictures drawn on any canvas from `sprites.json`, instead of copied drawing code that drifts from the app |
+| Words over the world | `stage.word(text, at, sub, color)` | `.wtag[data-anchor="x,y"]` (`data-leader`, `data-prefer`, `data-gap`, `--c`), `Mock.ship`, `Mock.keep`, `data-keepout`, `[data-keep]` | A name or note on a dark plate, placed clear of moving things, the HUD and other words; see Readable words |
+| Keys and hooks | `js(text)`, `css(text)` | `Mock.on/set/keys/toast/replay/text/picks/extras/frame/layout/overlaps/player` | Script for behaviour the markup cannot express |
+| Hosted note line | (automatic on the board) | `.knline > .ninp > textarea[data-note] + button.mic` | A note line under every item, with a mic and ⌘D; see Hosted pages |
+| Columns | `columns(template)`, `into(box)` | `.kcols` (`--cols`) | Side-by-side boxes, one under another on a narrow page |
 
 ### Adding a component
 
@@ -123,9 +133,10 @@ this table and to a starter or an example, and run `./check.sh`.
    project's own capture tool; its repo says how. Capture the scene without the element being
    replaced where the tool can hide it, and a HUD-on and HUD-off pair for a world effect (World
    effects).
-2. **Write the page.** Copy `$KIT/template.html` next to the captures as `page.html`. Point its
-   `@@IMG:...@@` placeholders at your shots. Build the mock-ups from the app's own classes (from the
-   project's add-on), so they look like the app without extra CSS. Only add the rules that are new.
+2. **Write the page.** Copy `$KIT/template.py` (or `perf.py`, `sizes.py`, `costs.py`) next to the
+   captures as `make.py` and build the page from its calls; `python3 make.py` writes `page.html`.
+   Draw the mock-ups in `stage.mock()` from the app's own classes (from the project's add-on), so
+   they look like the app without extra CSS, and add only the rules that are new with `p.css()`.
 3. **Build.** Run `python3 $KIT/build.py page.html`, which writes `page.built.html` and prints its
    size. The page must stay under 16 MB, so shrink stills with `|w=720`.
 4. **Check.** Run `node $KIT/shot.js page.built.html out/`, then look at `out/*.png`. The run fails
@@ -142,7 +153,69 @@ this table and to a starter or an example, and run `./check.sh`.
    context: add a `section.answer` to the item, tag it `.tag.done`, republish, and say so in one
    chat line. Animate: give the item a flipbook. Reply once on the comment and resolve it.
 
+## The builder (`pagekit.py`)
+
+```python
+import sys; sys.path.insert(0, '/home/user/claude-mockup-kit')
+from pagekit import Page, el, img, raw
+p = Page('Tether Looks', round=3, sub='3 LOOKS · PICK KEEP, CHANGE OR DROP')
+p.lede('What changes and what stays.')
+c = p.controls(); c.choice('look', 'LOOK', [('A', 'A · Braid', 'look A'), ('B', 'B · Arc', 'look B')])
+st = p.stage('1440x900'); st.bg('shots/01.png'); st.mock('<div class="panel">…</div>', when='look=A')
+p.pitch('E1', 'Vine braid', 'A green-gold braid.', art='shots/vine.png', verdict=True, asks='more context')
+p.picks()
+p.cli()
+```
+
+- Every method returns what it made. Components called inside `with p.into(box):` go into that
+  box (an item, a column from `p.columns('minmax(0, 1fr) 360px').cells[0]`); `el(tag, ...)` makes
+  any other element. Text is escaped; `raw()` passes markup through (a picture's SVG).
+- Pictures are `img(path, w=...)` or a path argument; `Page(assets=DIR)` is where they are read
+  from (default: the folder `make.py` runs in).
+- `p.cli()` ends a `make.py`: no arguments writes `page.html` (`--out FILE` elsewhere); `--hosted
+  DIR` writes what a board gets (`content.html`, `files/`, `page.json`); `--publish SLUG --ask
+  WORDS [--card ID]` uploads it.
+
+## Hosted pages
+
+A review board can host a page instead of a published file: the thread uploads it, the board frames
+it beside its own send bar, and the board sends the picks and notes back to the thread.
+
+- `p.publish(slug, ask, card=None, by=None)` uploads to `$KANBAN_URL` (the board's API base) with
+  `$KANBAN_TOKEN`: each picture to `PUT pages/<card>/<slug>/files/<name>?r=<round>`, then
+  `PUT pages/<card>/<slug>` with `{title, round, html, items: [{label, name}], ask, by}`. `card`
+  defaults to `$KANBAN_CARD`; `slug` (lower case, digits, dashes) names the page across rounds;
+  `ask` is the one line the card shows. The board takes 1 to 40 items with short labels.
+- The `html` is the page with every placeholder filled except the kit's own (`@@KIT_CSS@@`,
+  `@@KIT_JS@@` and the perf, sizes and costs parts), and pictures as relative `files/<name>`. No
+  pictures inlined, so no 16 MB limit; the page itself stays under 2 MB.
+- The board serves the kit from this repo's main: `hosted.frame(content, base)` fills those
+  placeholders, adds `<meta name="mock-host" content="board">` and a `<base>` where `files/` is
+  served. The board frames that document sandboxed (scripts, no same origin), so page script never
+  reaches the board, and has no storage.
+- Hosted, kit.js shows no copy box or SEND PICKS (a size lineup keeps its list and UNDO ALL), puts
+  the asks on each item's pick row, and gives every labelled item a note line with a mic (⌘D on a
+  desktop). It talks to its parent only by `postMessage`:
+
+| Way | Message | When |
+|---|---|---|
+| page → board | `{mockkit: 1, type: 'ready', v: 1, title, round, items: [{label, name}]}` | once the kit has started |
+| page → board | `{type: 'state', picks, state, notes: {label: words}, summary, picked, total, focus}` | after every pick and note change; `summary` reads `E1 Keep · E2 Change · E3 not picked yet`, `focus` is the item dictation would write into |
+| page → board | `{type: 'ask', item, name, ask, words, text}` | an ask pressed (Animate on an item with a flipbook plays it instead) |
+| page → board | `{type: 'mic', item, key}` | the mic pressed, or ⌘D anywhere in the page (`key: true`) |
+| page → board | `{type: 'key', key: 'Escape'}` | Esc the page itself does not use |
+| board → page | `{mockshell: 1, type: 'restore', state, notes}` | a draft or a sent round's picks and notes |
+| board → page | `{type: 'note', item, text}` | dictated words: the note's whole text so far |
+| board → page | `{type: 'listen', item}` | that note box shows listening (red); `item: null` stops |
+| board → page | `{type: 'mic', why}` | why dictation cannot work here (the mics dim and say it); `why: ''` clears it |
+| board → page | `{type: 'asked', item, ask}` | the ask reached the thread: its button gets a ✓ |
+
+`node $KIT/shot.js --hosted FRAME.html OUT/` frames a page this way over a local server that closes
+when it ends, sends each of these, and fails when one does not go through.
+
 ## Markup
+
+What pagekit writes, for reading a built page or adding a component.
 
 ```html
 <div class="seg" data-pick="layout">                    <!-- one choice; first button (or aria-pressed="true") starts picked -->
@@ -324,7 +397,7 @@ Getting sizes right is hard on a still, so a lineup puts every thing side by sid
 scale.
 
 A project bakes its sprites with its own tool, writing
-`s/*.png` and `sprites.json` into a page folder; copy `$KIT/sizes.html` there as `page.html`, retitle
+`s/*.png` and `sprites.json` into a page folder; copy `$KIT/sizes.py` there as `make.py`, retitle
 it, edit the EDIT words and build. `examples/sizes/` is a small made-up one.
 
 - `sprites.json` holds `sprites` (`{src, w, h, ox, oy, ppu, design}`: picture size, the sprite's
@@ -361,8 +434,8 @@ it, edit the EDIT words and build. `examples/sizes/` is a small made-up one.
 ## Cost charts
 
 A cost chart lays every price out as bars, so a dear tier or a cheap outlier shows at a glance,
-and the reviewer tunes the numbers on the chart itself. Copy `$KIT/costs.html`, or add a `.costchart` to any kit
-page with `@@COSTS_CSS@@` and `@@COSTS_JS@@` after the kit. Each `.costchart[data-src="ID"]` reads
+and the reviewer tunes the numbers on the chart itself. Copy `$KIT/costs.py`, or call `p.costs(data)` on any kit
+page. Each `.costchart[data-src="ID"]` reads
 `script#ID` (give the chart and the script different ids); several charts share one page and one
 copy box.
 
@@ -388,8 +461,8 @@ copy box.
 
 ## Perf pages
 
-A perf comparison starts from `perf.html`, not `template.html`. It has no stage: the numbers are
-the page. Copy it next to your logs as `page.html`, fill in the EDIT parts, build and check it the
+A perf comparison starts from `perf.py`, not `template.py`. It has no stage: the numbers are
+the page. Copy it next to your logs as `make.py`, fill in the EDIT parts, build and check it the
 same way. `examples/perf/` is filled with made-up logs.
 
 - `script#perf` holds the data as JSON. `targets` (`{ "floor": 90, "aim": 120 }` unless set) is the

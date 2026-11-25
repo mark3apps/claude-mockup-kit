@@ -5,17 +5,110 @@
 // (Mock.overlaps: off the stage, no plate, over a marked thing, the HUD or another word).
 //
 //   node $KIT/shot.js PAGE.built.html OUTDIR [--wait MS]
+//   node $KIT/shot.js --hosted FRAME.html OUTDIR      the page as the board frames it (below)
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
+// --hosted: FRAME is a frame document (hosted.py over pagekit's bundle) beside its files/. It is served
+// over a local http server that closes at the end and framed as the board frames it (sandboxed scripts,
+// no same origin). Fails unless the page says ready with its items, every item has a note line, no
+// send box of its own shows, and a pick, a note, an ask, Cmd-D and the shell's restore, note and
+// listen messages all go through. Shoots the frame at the board's panel size and at phone size.
+async function hosted(frameDoc, out, settle) {
+  const http = require('http');
+  const dir = path.dirname(path.resolve(frameDoc));
+  const types = { '.html': 'text/html', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.txt': 'text/plain' };
+  const shell = '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#07060f}iframe{border:0;width:100%;height:100%;display:block}</style>'
+    + '<iframe sandbox="allow-scripts" src="/frame"></iframe><script>window.got=[];addEventListener("message",e=>{if(e.data&&e.data.mockkit===1)window.got.push(e.data)});'
+    + 'window.tell=m=>document.querySelector("iframe").contentWindow.postMessage(Object.assign({mockshell:1},m),"*");</script>';
+  const srv = http.createServer((req, res) => {
+    const u = decodeURIComponent(req.url.split('?')[0]);
+    if (u === '/') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(shell); }
+    if (u === '/frame') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(fs.readFileSync(path.resolve(frameDoc))); }
+    const f = path.join(dir, path.normalize(u).replace(/^(\.\.[/\\])+/, ''));
+    if (!f.startsWith(dir + path.sep) || !fs.existsSync(f)) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { 'content-type': types[path.extname(f)] || 'application/octet-stream' });
+    res.end(fs.readFileSync(f));
+  });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${srv.address().port}/`;
+  const errs = [];
+  const b = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
+  try {
+    const run = async (vw, vh, name, steps) => {
+      const p = await b.newPage({ viewport: { width: vw, height: vh } });
+      p.on('pageerror', e => errs.push(`${name}: ${e.message}`));
+      p.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) errs.push(`${name}: ${m.text()}`); });
+      await p.goto(base);
+      await p.waitForFunction(() => window.got.some(m => m.type === 'ready'), null, { timeout: 8000 }).catch(() => errs.push(`${name}: no ready message from the page`));
+      const f = p.frames().find(x => x !== p.mainFrame());
+      await p.waitForTimeout(settle);
+      if (steps) await steps(p, f);
+      await p.screenshot({ path: path.join(out, `hosted-${name}.png`) });
+      await p.close();
+    };
+    await run(1220, 960, 'panel', async (p, f) => {
+      const got = () => p.evaluate(() => window.got);
+      const ready = (await got()).find(m => m.type === 'ready');
+      const dom = await f.evaluate(() => ({
+        labels: [...document.querySelectorAll('[data-item]')].map(i => i.dataset.item).filter(Boolean),
+        bare: [...document.querySelectorAll('[data-item]')].filter(i => i.dataset.item && !(i.matches('tr') ? i.nextElementSibling?.matches('.knrow') : i.querySelector('.knline'))).map(i => i.dataset.item),
+        send: [...document.querySelectorAll('.picks [data-send], .picks [data-copy], .picks [data-notes], .picks:not(.sfloat) pre')].some(e => e.getClientRects().length),
+        hosted: document.documentElement.classList.contains('khosted'),
+      }));
+      if (!dom.hosted) errs.push('the page did not turn hosted (meta mock-host)');
+      if (ready && ready.items.map(i => i.label).join(' ') !== dom.labels.join(' ')) errs.push(`ready lists ${ready.items.map(i => i.label).join(' ')}, the page has ${dom.labels.join(' ')}`);
+      if (dom.bare.length) errs.push(`items without a note line: ${dom.bare.join(' ')}`);
+      if (dom.send) errs.push('the page shows a send box of its own: the board sends');
+      if (!dom.labels.length) return;
+      const first = dom.labels[0];
+      const last = m => p.evaluate(t => window.got.filter(x => x.type === t).pop(), m);
+      const pick = await f.$(`[data-item="${first}"] .seg[data-pick] button[data-v]`);
+      if (pick) {
+        await pick.click(); await p.waitForTimeout(200);
+        const s = await last('state');
+        if (!s || !s.summary.startsWith(first + ' ') || s.summary.startsWith(first + ' not picked')) errs.push(`a pick on ${first} did not reach the shell (${s && s.summary})`);
+      }
+      const ta = await f.$(`[data-note="${first}"]`);
+      if (ta && await ta.isVisible()) {
+        await ta.click(); await ta.type('Thicker at the ship end'); await p.waitForTimeout(250);
+        const s = await last('state');
+        if (!s || s.notes[first] !== 'Thicker at the ship end') errs.push(`a note on ${first} did not reach the shell`);
+        await p.keyboard.press('Meta+d'); await p.waitForTimeout(150);
+        const mic = await last('mic');
+        if (!mic || mic.item !== first) errs.push(`Cmd-D in ${first}'s note did not ask the shell to dictate into it`);
+      } else if (ta) errs.push(`${first}'s note line is not on show`);
+      const ask = await f.$('[data-item] .kask:not([data-ask="animate"])');
+      if (ask && await ask.isVisible()) {
+        await ask.click(); await p.waitForTimeout(150);
+        if (!(await last('ask'))) errs.push('an ask press did not reach the shell');
+      }
+      await p.evaluate(([l]) => { window.tell({ type: 'restore', state: {}, notes: { [l]: 'From the board' } }); window.tell({ type: 'listen', item: l }); }, [dom.labels[dom.labels.length - 1]]);
+      await p.waitForTimeout(300);
+      const back = await f.evaluate(l => ({ v: document.querySelector(`[data-note="${l}"]`)?.value, live: !!document.querySelector(`[data-note="${l}"]`)?.closest('.ninp.live') }), dom.labels[dom.labels.length - 1]);
+      if (back.v !== 'From the board') errs.push('the shell\'s restore did not fill the note');
+      if (!back.live) errs.push('the shell\'s listen did not light the note box');
+      await p.evaluate(() => window.tell({ type: 'listen', item: null }));
+    });
+    await run(390, 728, 'phone');
+  } finally {
+    await b.close();
+    srv.close();
+  }
+  console.log(errs.length ? errs.join('\n') : 'no errors');
+  process.exit(errs.length ? 1 : 0);
+}
+
 (async () => {
-  const [page, out] = process.argv.slice(2).filter(a => !a.startsWith('--'));
-  if (!page || !out) { console.log('usage: node shot.js PAGE.built.html OUTDIR [--wait MS]'); process.exit(2); }
+  const args = process.argv.slice(2);
+  const [page, out] = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--wait');
+  if (!page || !out) { console.log('usage: node shot.js [--hosted] PAGE.html OUTDIR [--wait MS]'); process.exit(2); }
   const wi = process.argv.indexOf('--wait');
   const settle = wi > 0 ? Number(process.argv[wi + 1]) : 600;
   fs.mkdirSync(out, { recursive: true });
+  if (args.includes('--hosted')) return hosted(page, out, settle);
   // Headless Chromium hides scrollbars unless told not to; the page's own must show.
   const b = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
   const p = await b.newPage({ viewport: { width: 1500, height: 1100 } });

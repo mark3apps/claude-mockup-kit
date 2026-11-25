@@ -1,12 +1,12 @@
-"""Builds a mock-up page into one self-contained HTML file for the Artifact tool.
+"""Builds a mock-up page into one self-contained HTML file (for shot.js and a standalone page).
 
     python3 $KIT/build.py PAGE.html [--assets DIR] [--out OUT.html] [--addon FILE ...]
 
 Placeholders in PAGE.html (see README.md):
     @@KIT_CSS@@ @@KIT_JS@@              the kit itself
-    @@PERF_CSS@@ @@PERF_JS@@            the perf comparison page (perf.html)
-    @@SIZES_CSS@@ @@SIZES_JS@@          the size lineup page (sizes.html)
-    @@COSTS_CSS@@ @@COSTS_JS@@          cost charts (costs.html, or any page with a .costchart)
+    @@PERF_CSS@@ @@PERF_JS@@            the perf comparison page (perf.py)
+    @@SIZES_CSS@@ @@SIZES_JS@@          the size lineup page (sizes.py)
+    @@COSTS_CSS@@ @@COSTS_JS@@          cost charts (costs.py, or any page with a .costchart)
     @@APP_CSS@@ / @@APP_CSS:REGEX@@     the app's own CSS on the stage, from the project's add-on
                                         (standin.css when no add-on gives one)
     @@IMG:path|w=960|q=84|crop=x,y,w,h|png|webp@@  a picture as a data: URI (JPEG unless png or webp;
@@ -111,31 +111,34 @@ def load_addons(paths):
     return table
 
 
-def build(page, assets=None, addons=()):
-    page = Path(page)
-    base = Path(assets) if assets else page.parent
-    t = page.read_text()
+KIT_PARTS = ('KIT_CSS', 'KIT_JS', 'PERF_CSS', 'PERF_JS', 'SIZES_CSS', 'SIZES_JS', 'COSTS_CSS', 'COSTS_JS')
+
+
+def kit_part(name):
+    """The kit file a KIT_PARTS placeholder stands for: PERF_JS is perf.js."""
+    stem, _, ext = name.rpartition('_')
+    return KIT / f'{stem.lower()}.{ext.lower()}'
+
+
+def expand(t, page, base, addons=(), img=None, keep=()):
+    """Fills every placeholder in t. img(spec, base) replaces @@IMG@@ (default: a data: URI); names in keep
+    stay as written (pagekit's hosted content leaves the kit's own for the board)."""
     table = None
+    img = img or _img
 
     def one(m):
         name, _, arg = m.group(1).partition(':')
-        if name == 'KIT_CSS':
-            return (KIT / 'kit.css').read_text()
-        if name == 'KIT_JS':
-            return (KIT / 'kit.js').read_text()
-        if name == 'PERF_CSS':
-            return (KIT / 'perf.css').read_text()
-        if name == 'PERF_JS':
-            return (KIT / 'perf.js').read_text()
-        if name in ('SIZES_CSS', 'SIZES_JS', 'COSTS_CSS', 'COSTS_JS'):
-            return (KIT / (name[:5].lower() + '.' + name[6:].lower())).read_text()
+        if name in keep:
+            return m.group(0)
+        if name in KIT_PARTS:
+            return kit_part(name).read_text()
         if name == 'IMG':
-            return _img(arg, base)
+            return img(arg, base)
         if name == 'FILE':
             return re.sub(PH, one, (base / arg).read_text())
         nonlocal table
         if table is None:
-            table = load_addons(addon_paths(page, addons))
+            table = load_addons(addon_paths(Path(page), addons))
         if name in table:
             return table[name][0](arg, base)
         if name == 'APP_CSS':
@@ -143,10 +146,15 @@ def build(page, assets=None, addons=()):
         return m.group(0)
 
     t = re.sub(PH, one, t)
-    left = re.findall(r'@@[^@\s]{1,80}@@', t)
+    left = [x for x in re.findall(r'@@[^@\s]{1,80}@@', t) if x.strip('@').partition(':')[0] not in keep]
     if left:
         raise SystemExit(f'unfilled placeholders: {sorted(set(left))} (a project\'s own come from its add-on: README, Project add-ons)')
     return t
+
+
+def build(page, assets=None, addons=()):
+    page = Path(page)
+    return expand(page.read_text(), page, Path(assets) if assets else page.parent, addons)
 
 
 if __name__ == '__main__':
