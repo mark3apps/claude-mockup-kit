@@ -101,6 +101,14 @@ async function hosted(frameDoc, out, settle) {
         const s = await last('state');
         if (!s || !s.summary.split(' · ').includes(free)) errs.push(`a choice outside the items ("${free}") is not in the send text (${s && s.summary})`);
       }
+      // a toggle outside the items says its on or off words too
+      if (await f.$('.tog[data-pick]:not([data-item] .tog)')) {
+        await f.click('.tog[data-pick]:not([data-item] .tog)'); await p.waitForTimeout(200);
+        const want = await f.evaluate(() => { const t = document.querySelector('.tog[data-pick]:not([data-item] .tog)');
+          return t.getAttribute('aria-pressed') === 'true' ? (t.dataset.sayOn ?? t.textContent.trim()) : (t.dataset.sayOff ?? ''); });
+        const s = await last('state');
+        if (want && (!s || !s.summary.split(' · ').includes(want))) errs.push(`a toggle outside the items ("${want}") is not in the send text (${s && s.summary})`);
+      }
     });
     // A change a component reports through Mock.refresh (a size, a cost) must reach the shell, and its
     // hostPart state must come back on restore in a fresh page, as a reopened round does.

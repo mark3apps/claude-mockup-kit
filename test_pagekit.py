@@ -31,6 +31,20 @@ class Builder(unittest.TestCase):
             os.environ['MOCKUP_ADDONS'] = self.old
         self.tmp.cleanup()
 
+    def test_asks_twice(self):
+        # Mark 11-25: the choices up top are his picks; an item picking on the same thing again is refused
+        p = Page('Looks', round=1, assets=self.dir)
+        p.controls().choice('look', 'LOOK', [('A', 'Look A'), ('B', 'Look B')])
+        p.item('A', 'Look A', verdict=True)
+        with self.assertRaises(SystemExit) as e:
+            p.render()
+        self.assertIn('asks again what the LOOK choice picks', str(e.exception))
+        p = Page('Looks', round=1, assets=self.dir)
+        p.controls().choice('look', 'LOOK', [('A', 'Look A'), ('B', 'Look B')])
+        p.item('A', 'Look A')
+        p.item('E1', 'Ring glow', verdict=True)
+        self.assertIn('Ring glow', p.render())
+
     def page(self):
         p = Page('Looks <&>', round=2, sub='ROUND 2', assets=self.dir)
         p.lede('A & B')
