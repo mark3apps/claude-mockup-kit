@@ -966,7 +966,7 @@
   function init() {
     stageOwn();
     wireStats(); wireRound();
-    // Reviewers send picks and say the rest in chat, so an older page's notes box is taken out.
+    // Notes live on each item now (the board's send bar carries them), so an older page's notes box is taken out.
     $$('.picks textarea').forEach(t => { if (t.id) $$(`label[for="${CSS.escape(t.id)}"]`).forEach(l => l.replaceWith()); t.replaceWith(); });
     // A verdict starts with nothing picked, so an item the reviewer skips stays out of the picks.
     $$('.seg[data-verdict]').forEach(seg => {
