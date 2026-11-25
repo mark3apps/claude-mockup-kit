@@ -38,5 +38,5 @@ p.costs({
             {'id': 'mass.r', 'kind': 'research', 'costs': {'ore': 220, 'pyre': 70, 'volt': 30}, 'pips': {'CORE': 2}},
             {'id': 'mass.b', 'kind': 'build', 'costs': {'ore': 90, 'pyre': 30}}]},
     ]}, item='C1')
-p.picks(heading='YOUR CHANGES', send='SEND CHANGES')
+p.picks(heading='YOUR CHANGES')
 p.cli()

@@ -2,7 +2,7 @@
 // Drag to pan, wheel or pinch to zoom about the pointer, click an item to resize it in
 // the dock. FILTER narrows it to some types (any of D.facets) and lays the rest out side by side.
 // The sky is a world grid: its small square's size is in the view bar.
-// The changes are the page's picks: SEND PICKS and COPY carry them. Reads script#sizes
+// The changes are the page's picks: COPY carries them standalone, the board's send bar hosted. Reads script#sizes
 // (README: Size lineups). Load after kit.js.
 (() => {
   if (!window.Mock) throw new Error('sizes: load kit.js before sizes.js');

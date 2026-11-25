@@ -170,4 +170,4 @@ if __name__ == '__main__':
     n = len(html.encode())
     print(f'{out}  {n // 1024} KB')
     if n > LIMIT:
-        raise SystemExit('over the 16 MB artifact limit: shrink pictures with |w= or |q=')
+        raise SystemExit('over the 16 MB page limit: shrink pictures with |w= or |q=')

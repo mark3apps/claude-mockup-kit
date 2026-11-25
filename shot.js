@@ -1,6 +1,6 @@
 // Checks a built mock-up page: clicks every pick, shoots the stage for each, then the whole page
-// at desktop and phone width. Fails on a script error, an unlabelled item, a missing SEND PICKS
-// or voice-notes toggle, a page that breaks when its scripts run again (a republish into an open
+// at desktop and phone width. Fails on a script error, an unlabelled item, a copy box
+// without COPY, a page that breaks when its scripts run again (a republish into an open
 // window), a page that scrolls sideways, or a word on the stage that cannot be read in any pick
 // (Mock.overlaps: off the stage, no plate, over a marked thing, the HUD or another word).
 //
@@ -55,7 +55,7 @@ async function hosted(frameDoc, out, settle) {
       const dom = await f.evaluate(() => ({
         labels: [...document.querySelectorAll('[data-item]')].map(i => i.dataset.item).filter(Boolean),
         bare: [...document.querySelectorAll('[data-item]')].filter(i => i.dataset.item && !(i.matches('tr') ? i.nextElementSibling?.matches('.knrow') : i.querySelector('.knline'))).map(i => i.dataset.item),
-        send: [...document.querySelectorAll('.picks [data-send], .picks [data-copy], .picks [data-notes], .picks:not(.sfloat) pre')].some(e => e.getClientRects().length),
+        send: [...document.querySelectorAll('.picks [data-copy], .picks:not(.sfloat) pre')].some(e => e.getClientRects().length),
         hosted: document.documentElement.classList.contains('khosted'),
       }));
       if (!dom.hosted) errs.push('the page did not turn hosted (meta mock-host)');
@@ -154,7 +154,7 @@ async function hosted(frameDoc, out, settle) {
   p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   // A file: URL built from the operator's own argument, so the page can only be a local file.
   await p.goto(url.pathToFileURL(path.resolve(page)).href); // nosemgrep: playwright-goto-injection
-  await p.waitForFunction(() => window.Mock && document.querySelector('[aria-pressed]'));
+  await p.waitForFunction(() => window.Mock && document.querySelector('[aria-pressed], .picks [data-copy]'));
   await p.waitForTimeout(settle);
 
   const stage = async name => {
@@ -188,16 +188,16 @@ async function hosted(frameDoc, out, settle) {
   await p.waitForTimeout(settle);
   await p.screenshot({ path: path.join(out, 'page.png'), fullPage: true });
   const text = await p.evaluate(() => Mock.text());
-  // The review standard: every item labelled, its asks drawn, SEND PICKS and the voice-notes toggle by COPY.
+  // The review standard: every item labelled, its asks drawn, and COPY in the copy box.
   const std = await p.evaluate(() => ({
     items: document.querySelectorAll('[data-item]').length,
     bare: [...document.querySelectorAll('[data-item]')].filter(i => !i.querySelector('.ilabel') || (i.dataset.asks !== '' && !i.querySelector('.kasks'))).map(i => i.dataset.item),
-    send: !!document.querySelector('.picks [data-send]') && !!document.querySelector('.picks [data-notes]'),
+    copy: !!document.querySelector('.picks [data-copy]'),
     picks: !!document.querySelector('.picks'),
   }));
   if (std.picks && !std.items) errs.push('no [data-item]: label every item the reviewer picks on');
   if (std.bare.length) errs.push(`items without a label or their asks: ${std.bare.join(' ')}`);
-  if (std.picks && !std.send) errs.push('no SEND PICKS or voice-notes toggle: copy the .picks .row from template.html');
+  if (std.picks && !std.copy) errs.push('no COPY button: copy the .picks .row from template.html');
 
   // A republish swaps the new page into the open window and runs its scripts again: they must not
   // throw, and a pick must still land once.
@@ -222,32 +222,6 @@ async function hosted(frameDoc, out, settle) {
   const wide = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   await p.screenshot({ path: path.join(out, 'phone.png'), fullPage: true });
 
-  // The longest SEND PICKS (every pick on its last value, a note past one send) must reach the thread: a
-  // stand-in for the comments capability takes each part, and none may pass sendToClaude's 4096 bytes.
-  if (std.send) {
-    const q = await b.newPage({ viewport: { width: 1500, height: 1100 } });
-    await q.addInitScript(() => {
-      window.__sent = [];
-      window.claude = { use: async n => (n === 'comments' ? { canSendToClaude: async () => 'available', anchorFor: async () => ({}), sendToClaude: async x => { window.__sent.push(x.text); } } : null) };
-    });
-    await q.goto(url.pathToFileURL(path.resolve(page)).href); // nosemgrep: playwright-goto-injection
-    await q.waitForFunction(() => window.Mock && !document.querySelector('.picks [data-send]').disabled);
-    await q.evaluate(() => {
-      Mock.pickers().forEach(k => Mock.set(k.key, k.values[k.values.length - 1]));
-      // Long lines from a component, so a page with few picks still sends in parts.
-      Mock.extras.push(() => Array.from({ length: 60 }, (_, i) => `X${i} A long line → × · ${'w'.repeat(40)}`).join('\n'));
-    });
-    for (let i = 0; i < 20; i++) {
-      await q.click('.picks [data-send]');
-      await q.waitForTimeout(100);
-      if (!/PART/.test(await q.textContent('.picks [data-send]'))) break;
-    }
-    const sent = await q.evaluate(() => window.__sent.map(t => new TextEncoder().encode(t).length));
-    if (!sent.length) errs.push('SEND PICKS sent nothing with every pick made');
-    const big = sent.filter(n => n > 4096);
-    if (big.length) errs.push(`SEND PICKS sent ${big.length} text${big.length > 1 ? 's' : ''} over 4096 bytes (${big.join(', ')}): split it`);
-    console.log(`longest send: ${sent.length} part${sent.length > 1 ? 's' : ''}, ${sent.join(' + ')} bytes`);
-  }
   await b.close();
 
   console.log(`picks: ${pickers.map(k => `${k.key}(${k.values.length})`).join(' ')}`);
