@@ -386,7 +386,7 @@ class Page:
         for i, pr in enumerate(data.get('pairs', [])):
             self.items_.append((pr.get('item') or f'S{i + 1}', pr.get('scene', '')))
 
-    def sizes(self, words, sprites='sprites.json', heading='SIZE LINEUP', send=None):
+    def sizes(self, words, sprites='sprites.json', heading='SIZE LINEUP'):
         """A size lineup: the whole page is every item at true scale (README: Size lineups). It takes
         the place of every other component; words is the line under the heading."""
         self.part('SIZES')
@@ -422,10 +422,9 @@ class Page:
                 + el('script', raw(f'@@FILE:{sprites}@@'), type='application/json', id='sizes').render())
 
     # ---- the copy box, and the page's own extras
-    def picks(self, format=None, heading='YOUR PICKS', send=None):
+    def picks(self, format=None, heading='YOUR PICKS'):
         """The picks. Standalone it is the copy box with COPY; on the board the board's own send bar
-        takes its place (send is ignored, kept so older make.py files still build).
-        format: "THING: {layout}; {motion}" ({items} by default)."""
+        takes its place. format: "THING: {layout}; {motion}" ({items} by default)."""
         box = el('div', el('h3', heading), el('pre', data_format=format),
                  el('div', el('button', 'COPY', cls='kbtn gold', data_copy=True), el('span', cls='ok'), cls='row'),
                  cls='picks')

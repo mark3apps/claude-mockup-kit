@@ -79,7 +79,7 @@ class Builder(unittest.TestCase):
         h = p.render()
         self.assertLess(h.index('window.draw = t'), h.index("Mock.player('#pl'"))
 
-    def test_standalone_source_has_the_kit_and_send(self):
+    def test_standalone_source_has_the_kit_and_copy(self):
         h = self.page().render()
         for x in ('<meta charset="utf-8">', '@@KIT_CSS@@', '@@KIT_JS@@', '@@APP_CSS@@', 'data-copy'):
             self.assertIn(x, h)
