@@ -12,7 +12,7 @@ Pages are built with `pagekit.py`: one function per component, so a page is a sh
 (`make.py`) and never hand-written HTML. The drawn mock inside a stage is the one place a page writes
 markup (`stage.mock`). The same script writes the hosted content a review board frames (Hosted
 pages), and a standalone page that `build.py` and `shot.js` check locally. Only the board version is
-ever shown to a reviewer: pages are never published as claude.ai Artifacts.
+ever shown to a reviewer.
 
 ## Using it in a Claude project
 
