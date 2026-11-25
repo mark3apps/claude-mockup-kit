@@ -118,6 +118,7 @@ class Controls(El):
             v, words, say = (list(o) + [None])[:3]
             seg.add(el('button', words, data_v=v, data_say=words if say is None else say,
                        aria_pressed='true' if v == start else None))
+        seg.choice_label = label
         self.add(el('div', el('span', label), seg, cls='ctl', data_when=when))
         return seg
 
@@ -455,9 +456,43 @@ class Page:
         """[(label, name)] of every item, in page order."""
         return list(self.items_)
 
+    def asks_twice(self):
+        """[why] for each item whose own pick asks again what a choice already picks. Mark (11-25): the choices
+        that drive the preview are his picks; a page that then asked "look B: Keep / Change / Drop" below them
+        asked the same thing twice, and the two answers disagreed."""
+        words = lambda e: ' '.join(k for k in e.kids if isinstance(k, str)).strip().lower()
+        choices = []
+        for e in self.root.walk():
+            if e.attrs.get('class') == 'seg' and e.attrs.get('data_pick') and not e.attrs.get('data_verdict') \
+                    and not e.attrs.get('data_item'):
+                said = {e.attrs['data_pick'].lower(), str(getattr(e, 'choice_label', '')).lower()}
+                for b in e.kids:
+                    if isinstance(b, El):
+                        said |= {str(b.attrs.get('data_v', '')).lower(), words(b)}
+                choices.append((getattr(e, 'choice_label', e.attrs['data_pick']), said - {''}))
+        names = dict(self.items_)
+        out = []
+        for e in self.root.walk():
+            lab = e.attrs.get('data_item')
+            if not lab:
+                continue
+            picks = any(k.attrs.get('data_verdict') for k in e.walk() if k is not e) or \
+                (isinstance(e, Item) and e.pickrow is not None)
+            if not picks:
+                continue
+            mine = {lab.lower(), str(names.get(lab, '')).lower()}
+            for label, said in choices:
+                if mine & said:
+                    out.append(f'item {lab} ({names.get(lab, "")}) asks again what the {label} choice picks: the choice '
+                               'is the pick and its words go in the send. Give the item verdict=None (a note line only), '
+                               'or drop the choice')
+        return out
+
     # ---- output
     def render(self, hosted=False):
         """The page source with placeholders. hosted=True leaves out the head a framing board writes."""
+        if twice := self.asks_twice():
+            raise SystemExit('; '.join(twice))
         parts = [p for p in ('PERF', 'SIZES', 'COSTS') if p in self.parts]
         css = '\n'.join(['@@APP_CSS@@'] * bool(self.app_css) + ['@@KIT_CSS@@'] + [f'@@{p}_CSS@@' for p in parts] + self.css_)
         page_js = ''.join(f'\n<script>\n(() => {{\n{j}\n}})();\n</script>' for j in self.js_ + self.late_)
