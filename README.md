@@ -51,7 +51,8 @@ beside the kit's clone (`/home/user/*/`); the first to define a name wins, and a
 warning (pass `--addon` to choose). An add-on is Python and runs at build time: only clone repos
 you trust beside the kit. `@@APP_CSS@@` is the one name the kit's own pages use; without an add-on it
 gives `standin.css`, so the template builds anywhere. `stage_css.scoped(css)` prefixes every rule
-with `.stage`, turns `:root`/`html`/`body` into the stage, keeps `@keyframes` and `@media`, drops
+with `.stage`, turns `:root`/`html`/`body` into the stage (dropping their `height`/`min-height`, so
+the stage keeps its own size), keeps `@keyframes` and `@media`, drops
 `@font-face`, and rewrites `vw`/`vh` against the stage size. The page palette is `kit.css`'s
 `--k-*` variables; an add-on can return a `:root { --k-... }` block to restyle it.
 

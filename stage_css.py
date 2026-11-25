@@ -4,8 +4,9 @@
 
 `scoped(css)` prefixes every rule with `.stage`, turns `:root` / `html` / `body` into the stage
 itself, keeps `@keyframes` and `@media`, drops `@font-face`, and rewrites vw / vh against the stage
-size (the stage is the app's window, not the browser's). A project add-on calls it for its own
-placeholder (README: Project add-ons).
+size (the stage is the app's window, not the browser's). The stage keeps its own height: a page's
+`html, body { height: 100% }` made it the scaled box's height, cropping the capture (report #77).
+A project add-on calls it for its own placeholder (README: Project add-ons).
 """
 import argparse
 import re
@@ -36,6 +37,14 @@ def _scope_sel(sel, scope):
         rest = sel[m.end():].strip()
         return f'{scope}{m.group(1)}' + (f' {rest}' if rest else '')
     return f'{scope} {sel}'
+
+
+_HEIGHT = re.compile(r'(?:(?<=;)|^)\s*(?:min-)?height\s*:[^;]*(?:;|$)', re.I)
+
+
+def _is_stage(sel):
+    m = _ROOT.match(sel.strip())
+    return bool(m) and not sel.strip()[m.end():].strip()
 
 
 def _units(body, w, h):
@@ -71,8 +80,14 @@ def scoped(src, scope='.stage', size=(1440, 900), keep=None):
             parts = [p for p in head.split(',') if p.strip()]
             if keep_re and head != ':root' and not head.startswith(('html', 'body')):
                 parts = [p for p in parts if keep_re.search(p.strip())]
-            if parts:
-                out.append(','.join(_scope_sel(p, scope) for p in parts) + f'{{{_units(body, *size)}}}')
+            roots = [p for p in parts if _is_stage(p)]
+            rest = [p for p in parts if p not in roots]
+            if roots:
+                rb = _HEIGHT.sub('', body)
+                if rb.strip():
+                    out.append(','.join(_scope_sel(p, scope) for p in roots) + f'{{{_units(rb, *size)}}}')
+            if rest:
+                out.append(','.join(_scope_sel(p, scope) for p in rest) + f'{{{_units(body, *size)}}}')
     return '\n'.join(out)
 
 
