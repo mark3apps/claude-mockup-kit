@@ -1,4 +1,6 @@
 """Tests for pagekit and hosted.py: python3 -m unittest test_pagekit (check.sh runs it)."""
+import contextlib
+import io
 import json
 import os
 import tempfile
@@ -120,6 +122,48 @@ class Builder(unittest.TestCase):
         self.assertIn('id="sdock"', h)
         self.assertEqual(p.items(), [('D1', 'Dart · scout')])
 
+    def test_publish_gives_the_full_link(self):
+        # report #50: the bare relative view ended up on the board's API host, which 404s for the reviewer
+        answer = {}
+
+        class H(BaseHTTPRequestHandler):
+            def do_PUT(self):
+                self.rfile.read(int(self.headers['Content-Length']))
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(answer).encode())
+
+            def log_message(self, *a):
+                pass
+
+        srv = HTTPServer(('127.0.0.1', 0), H)
+        t = threading.Thread(target=srv.serve_forever, daemon=True)
+        t.start()
+        old = {k: os.environ.pop(k, None) for k in ('KANBAN_VIEW', 'KANBAN_URL', 'KANBAN_TOKEN')}
+        pub = lambda: self.page().publish('looks', 'pick', card='c', board=f'http://127.0.0.1:{srv.server_port}/api', token='t')
+        try:
+            answer.update(ok=True, view='/p/c/looks?r=2', url='https://board.example:8443/p/c/looks?r=2')
+            self.assertEqual(pub()['link'], 'https://board.example:8443/p/c/looks?r=2')
+            answer.pop('url')
+            os.environ['KANBAN_VIEW'] = 'https://view.example:8443/'
+            self.assertEqual(pub()['link'], 'https://view.example:8443/p/c/looks?r=2')
+            os.environ.update(KANBAN_URL=f'http://127.0.0.1:{srv.server_port}/api', KANBAN_TOKEN='t')
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.page().cli(['--publish', 'looks', '--ask', 'pick', '--card', 'c'])
+        finally:
+            for k, v in old.items():
+                os.environ.pop(k, None)
+                if v is not None:
+                    os.environ[k] = v
+            srv.shutdown()
+            srv.server_close()
+            t.join(5)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(lines[0], 'https://view.example:8443/p/c/looks?r=2')
+        self.assertEqual(json.loads(lines[-1])['link'], lines[0])
+
     def test_publish_needs_board_token_and_card(self):
         for k in ('KANBAN_URL', 'KANBAN_TOKEN', 'KANBAN_CARD'):
             os.environ.pop(k, None)
@@ -156,6 +200,7 @@ class Builder(unittest.TestCase):
             srv.server_close()
             t.join(5)
         self.assertEqual(got['view'], '/p/cmsg_1/looks?r=2')
+        self.assertEqual(got['link'], f'http://127.0.0.1:{srv.server_port}/p/cmsg_1/looks?r=2')
         self.assertEqual(len(seen), 3)
         for path, auth, ctype, _ in seen[:2]:
             self.assertRegex(path, r'^/api/pages/cmsg_1/looks/files/shot-[0-9a-f]{8}\.(png|jpg)\?r=2$')

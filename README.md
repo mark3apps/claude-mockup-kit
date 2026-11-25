@@ -142,11 +142,13 @@ this table and to a starter or an example, and run `./check.sh`.
 4. **Check.** Run `node $KIT/shot.js page.built.html out/`, then look at `out/*.png`. The run fails
    on a script error, when the page scrolls sideways at phone width, or when a page with a copy box
    has no `[data-item]`, an item without its label or asks, or a copy box without COPY.
-5. **Upload.** End `make.py` with `p.cli()` and upload it with the project's page command (in a
-   project with the workflow kit: `slinger_hooks.py page cmsg_THREAD make.py SLUG "the ask"`, or
-   `card.py page make.py SLUG "the ask"` in a personal session). It runs `make.py --publish`
-   (Hosted pages), puts the card in Needs Mark and prints the page's board link for the thread's
-   **Picks:** or **Question:** line. The next round is the same command with `Page(round=N+1)`.
+5. **Upload.** End `make.py` with `p.cli()` and upload it with the project's page command where its
+   workflow kit has one (`slinger_hooks.py page cmsg_THREAD make.py SLUG "the ask"`, or `card.py page
+   make.py SLUG "the ask"` in a personal session), else `python3 make.py --publish SLUG --ask "the ask"
+   --card CARD` (Hosted pages). The upload puts the card in Needs Mark, and the first line printed is
+   the page's full board link: paste that line, as printed, into the thread's **Picks:** or
+   **Question:** line, never a `/p/...` path or a link with its port changed. The next round is the
+   same command with `Page(round=N+1)`.
 6. **Answer.** The reviewer's picks, notes and asks come back as notes on the thread's board card,
    which its hooks show it at its next step. Tell me more: answer in chat, label first. Clarify and
    Show me in context: add an `answer()` to the item, tagged CLARIFIED / IN CONTEXT ADDED, and upload
@@ -173,7 +175,7 @@ p.cli()
   from (default: the folder `make.py` runs in).
 - `p.cli()` ends a `make.py`: no arguments writes `page.html` (`--out FILE` elsewhere); `--hosted
   DIR` writes what a board gets (`content.html`, `files/`, `page.json`); `--publish SLUG --ask
-  WORDS [--card ID]` uploads it.
+  WORDS [--card ID]` uploads it and prints the page's full link, then the board's answer as JSON.
 
 ## Hosted pages
 
@@ -184,7 +186,9 @@ it beside its own send bar, and the board sends the picks and notes back to the 
   `$KANBAN_TOKEN`: each picture to `PUT pages/<card>/<slug>/files/<name>?r=<round>`, then
   `PUT pages/<card>/<slug>` with `{title, round, html, items: [{label, name}], ask, by}`. `card`
   defaults to `$KANBAN_CARD`; `slug` (lower case, digits, dashes) names the page across rounds;
-  `ask` is the one line the card shows. The board takes 1 to 40 items with short labels.
+  `ask` is the one line the card shows. The board takes 1 to 40 items with short labels. Its answer
+  gains `link`, the full page link: the board's own `url`, else `$KANBAN_VIEW` (where the board's
+  pages are viewed, when that is not the API's host) or the API's origin, plus the answer's `view`.
 - The `html` is the page with every placeholder filled except the kit's own (`@@KIT_CSS@@`,
   `@@KIT_JS@@` and the perf, sizes and costs parts), and pictures as relative `files/<name>`. No
   pictures inlined, so no 16 MB limit; the page itself stays under 2 MB.
