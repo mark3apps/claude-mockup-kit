@@ -202,7 +202,7 @@ it beside its own send bar, and the board sends the picks and notes back to the 
 | Way | Message | When |
 |---|---|---|
 | page → board | `{mockkit: 1, type: 'ready', v: 1, title, round, items: [{label, name}]}` | once the kit has started |
-| page → board | `{type: 'state', picks, state, notes: {label: words}, parts, summary, picked, total, focus}` | after every pick, note and component change; `summary` reads `E1 Keep · E2 Change · E3 not picked yet`; `parts` is each component's own state (a size lineup's sizes, a cost chart's edits), which the board keeps with the draft and the sent round; `picked`/`total` count items with pickers plus one per such component; `focus` is the item dictation would write into |
+| page → board | `{type: 'state', picks, state, notes: {label: words}, parts, summary, picked, total, focus}` | after every pick, note and component change; `summary` reads `E1 Keep · E2 Change · E3 not picked yet · layout B`, each choice outside the items adding its `data-say` words at the end, so the board's send text carries every pick; `parts` is each component's own state (a size lineup's sizes, a cost chart's edits), which the board keeps with the draft and the sent round; `picked`/`total` count items with pickers plus one per such component; `focus` is the item dictation would write into |
 | page → board | `{type: 'ask', item, name, ask, words, text}` | an ask pressed (Animate on an item with a flipbook plays it instead) |
 | page → board | `{type: 'mic', item, key}` | the mic pressed, or ⌘D anywhere in the page (`key: true`) |
 | page → board | `{type: 'key', key: 'Escape'}` | Esc the page itself does not use |

@@ -902,6 +902,13 @@
       if (ps.length) { total++; if (says.length) picked++; line.push(`${l} ${says.length ? says.join(', ') : 'not picked yet'}`); }
       else if ((notes[l] || '').trim()) line.push(`${l} note`);
     });
+    // A choice outside every item (a page's LAYOUT row) says its words too, as the copy box's format does:
+    // a send carried "D1 Keep … D7 Keep" and lost Mark's look B, which only the send's state held (11-25).
+    pickers().forEach(p => {
+      const el = document.querySelector(p.kind === 'tog' ? `.tog[data-pick="${p.key}"]` : `.seg[data-pick="${p.key}"]`);
+      const w = el && !el.closest('[data-item]') ? say(p.key) : '';
+      if (w) line.push(w);
+    });
     const parts = {};
     Object.entries(hostParts).forEach(([n, pt]) => {
       parts[n] = pt.get();
