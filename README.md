@@ -1,17 +1,18 @@
 # Mock-up kit
 
-Use this to build interactive mock-up pages that Claude publishes as Artifacts for review. A mock-up
-is one page. It draws the app's window at its real size over a capture from the real app, and has
-clickable options and toggles. It shows every still on the same page, and ends with a COPY FOR THE
-CHAT box that holds the current picks; SEND PICKS posts them to the thread that published the page.
-Labels on the page must match the words in the copy box, so a pasted or sent pick maps straight onto
-the build. The kit also has starters for pages with no stage: a size lineup, a cost chart and a perf
+Use this to build interactive mock-up pages that a thread uploads to its project's review board for
+review. A mock-up is one page. It draws the app's window at its real size over a capture from the
+real app, and has clickable options and toggles. It shows every still on the same page; on the board
+every item gets a pick row and a note line, and the board sends the picks and notes back to the
+thread (Hosted pages). Labels on the page must match the words the picks use, so a sent pick maps
+straight onto the build. The kit also has starters for pages with no stage: a size lineup, a cost chart and a perf
 comparison.
 
 Pages are built with `pagekit.py`: one function per component, so a page is a short Python script
 (`make.py`) and never hand-written HTML. The drawn mock inside a stage is the one place a page writes
-markup (`stage.mock`). The same script writes the standalone page that `build.py` and `shot.js`
-check, and the hosted content a review board frames (Hosted pages).
+markup (`stage.mock`). The same script writes the hosted content a review board frames (Hosted
+pages), and a standalone page that `build.py` and `shot.js` check locally. Only the board version is
+ever shown to a reviewer: pages are never published as claude.ai Artifacts.
 
 ## Using it in a Claude project
 
@@ -97,8 +98,7 @@ Build from these before writing anything new. Markup and script details are unde
 | Notes | `item(label, name, points)` | `.below > .notes > .note` (`.today`) | One card per option saying what changes; `.today` marks the app as it is |
 | Item | `item`, `pitch`, `stats` rows | `[data-item="E2"]` (`data-name`) + `{items}` | Every thing the reviewer picks on: a gold label on its heading and a line in the copy box that starts with the label |
 | Asks | `asks=` on `item`, `pitch`, `stats` rows | `data-asks="more clarify context animate"` on an item | The asks that fit the item: Tell me more, Clarify, Show me in context, Animate. Default `more`; `""` for none |
-| Copy box | `picks(format)` | `.picks pre[data-format]`, `[data-copy]` | The picks as approval text, kept per viewer across a republish. No notes box: the reviewer sends or copies the picks and says the rest in chat, and the kit takes out an older page's box |
-| Send picks | `picks()` | `.picks .row`: `button.kbtn.send[data-send]`, `button.tog[data-notes]`, COPY | SEND PICKS posts the picks to the publishing thread, saying whether voice notes follow; the reason beside it when it cannot |
+| Picks | `picks(format)` | `.picks pre[data-format]`, `.picks .row` | Hosted: nothing on the page (the board's send bar holds the picks and sends them). In the standalone check build: the picks as text with a COPY row, which `shot.js` checks |
 | Answer box | `answer(item, title, steps, tag)` | `section.answer > h4` + `ol.steps`, `.tag.done` | Where a thread answers Clarify (steps) or Show me in context on the item, marked CLARIFIED / IN CONTEXT ADDED |
 | Before/after | `compare(before, after, labels)` | `.compare[data-before][data-after]` with two `img` | A drag slider between two captures |
 | Stills | `stills(shots)` | `.stills > figure > img[data-full]` | A gallery that opens each still at 1:1 |
@@ -142,16 +142,15 @@ this table and to a starter or an example, and run `./check.sh`.
 4. **Check.** Run `node $KIT/shot.js page.built.html out/`, then look at `out/*.png`. The run fails
    on a script error, when the page scrolls sideways at phone width, or when a page with a copy box
    has no `[data-item]`, an item without its label or asks, or no SEND PICKS and voice-notes toggle.
-5. **Publish.** Call the Artifact tool on `page.built.html` with `capabilities: {"comments": {}}`
-   (the `composer_only` form cannot send). Confirm the page is watched (the publish result says so;
-   else ArtifactComments `watch`), and keep the thread open while the page waits. For the next
-   round, update the same path or URL; a redeploy that omits `capabilities` keeps them.
-6. **Answer presses.** A press reaches the thread about ten seconds later as a comment
-   notification; read it with ArtifactComments `read`. Each text starts with the page title and the
-   item's label. SEND PICKS with voice notes to follow: say you have them and wait for the chat
-   message; with none: go ahead. Tell me more: answer in chat, label first. Clarify and Show me in
-   context: add a `section.answer` to the item, tag it `.tag.done`, republish, and say so in one
-   chat line. Animate: give the item a flipbook. Reply once on the comment and resolve it.
+5. **Upload.** End `make.py` with `p.cli()` and upload it with the project's page command (in a
+   project with the workflow kit: `slinger_hooks.py page cmsg_THREAD make.py SLUG "the ask"`, or
+   `card.py page make.py SLUG "the ask"` in a personal session). It runs `make.py --publish`
+   (Hosted pages), puts the card in Needs Mark and prints the page's board link for the thread's
+   **Picks:** or **Question:** line. The next round is the same command with `Page(round=N+1)`.
+6. **Answer.** The reviewer's picks, notes and asks come back as notes on the thread's board card,
+   which its hooks show it at its next step. Tell me more: answer in chat, label first. Clarify and
+   Show me in context: add an `answer()` to the item, tagged CLARIFIED / IN CONTEXT ADDED, and upload
+   the next round. Animate: give the item a flipbook in the next round.
 
 ## The builder (`pagekit.py`)
 
@@ -178,7 +177,7 @@ p.cli()
 
 ## Hosted pages
 
-A review board can host a page instead of a published file: the thread uploads it, the board frames
+A review board hosts every page: the thread uploads it, the board frames
 it beside its own send bar, and the board sends the picks and notes back to the thread.
 
 - `p.publish(slug, ask, card=None, by=None)` uploads to `$KANBAN_URL` (the board's API base) with
@@ -251,16 +250,8 @@ What pagekit writes, for reading a built page or adding a component.
 - `{items}` is the default `data-format`: one line per item that holds picks, `E2 Name: Later`.
   Only `{items}` and `{verdicts}` add labels for you; a custom `data-format` or `Mock.picks` names
   them itself, as in `data-say="layout A"`.
-- SEND PICKS posts `Title · PICKS`, `Mock.text()` (the picks) and whether voice notes
-  follow, through the comments capability. It stays disabled, with the reason beside it, until
-  `canSendToClaude()` says `available` (checked at load and again at 4 and 12 s, since watching
-  sessions are learned late). `sendToClaude` refuses over 4096 bytes of UTF-8 (→ × · are three
-  each), so longer picks go in parts on line breaks, one press each, the button reading SEND PART 2
-  OF 3; `shot.js` sends the longest picks through a stand-in and fails a part over the limit. A send
-  that fails says why and copies its text instead; COPY always works.
-- Picks and the voice-notes toggle are kept in the viewer's localStorage, keyed by the
-  title, the `h1` and the round banner's `data-round`, so a republish keeps them and a new round
-  starts clean.
+- The standalone build's `.picks` row (COPY, and the older SEND PICKS markup `shot.js` still
+  checks) exists for local checks only; a hosted page hides it and the board's send bar sends.
 - `{verdicts}` in a `data-format` (or `say('verdicts')` in a custom `Mock.picks`) groups every
   `.seg[data-verdict]` by its pick in button order. Each is named by its item's label and name,
   else `data-verdict="..."`, else its card's `h3`.
@@ -499,9 +490,8 @@ placeholder left unfilled fails the build. For custom picture work, such as a co
 
 ## Gotchas
 
-- Check a page as a phone, not only at a narrow width: the Artifact adds `<meta name="viewport" content="width=device-width,initial-scale=1">` when it publishes, so a local check of `page.built.html` in a phone emulator needs that tag added first, or it lays the page out 980 px wide. `shot.js`'s phone shot (390 px wide) covers the layout but not touch sizes.
-- A republish to the same artifact swaps the new page into a window the reviewer already has open and runs
-  its scripts again. Keep the page's own script inside the template's `(() => { ... })()`, since a
+- Check a page as a phone, not only at a narrow width: a local check of `page.built.html` in a phone emulator needs `<meta name="viewport" content="width=device-width,initial-scale=1">` added first, or it lays the page out 980 px wide. `shot.js`'s phone shot (390 px wide) covers the layout but not touch sizes.
+- The board can load a page into a frame the reviewer already has open and run its scripts again. Keep the page's own script inside the template's `(() => { ... })()`, since a
   top-level `const` or `let` throws "already declared" there and the page goes dead. Animate with
   `Mock.frame(t => ...)` rather than `requestAnimationFrame`, so the old round's loop stops.
   `shot.js` runs the scripts a second time and fails if they throw.
