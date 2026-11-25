@@ -20,9 +20,12 @@ KIT = Path(__file__).resolve().parent
 PARTS = {'KIT_CSS': 'kit.css', 'KIT_JS': 'kit.js', 'PERF_CSS': 'perf.css', 'PERF_JS': 'perf.js',
          'SIZES_CSS': 'sizes.css', 'SIZES_JS': 'sizes.js', 'COSTS_CSS': 'costs.css', 'COSTS_JS': 'costs.js'}
 MARK = re.compile(r'@@(' + '|'.join(PARTS) + r')@@')
+# Dark before anything paints: the board frames pages in a dark panel, and a page's kit.css loads later in the
+# body, so without these a dark-mode board flashed white on open (Mark 11-25).
 HEAD = ('<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="mock-host" content="board">{base}</head>\n<body>\n')
+        '<meta name="mock-host" content="board"><meta name="color-scheme" content="dark">'
+        '<style>html{{background:#07060f}}</style>{base}</head>\n<body>\n')
 
 
 def frame(content, base=None, kit=KIT):
