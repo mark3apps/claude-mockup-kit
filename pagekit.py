@@ -386,11 +386,11 @@ class Page:
         for i, pr in enumerate(data.get('pairs', [])):
             self.items_.append((pr.get('item') or f'S{i + 1}', pr.get('scene', '')))
 
-    def sizes(self, words, sprites='sprites.json', heading='SIZE LINEUP', send='SEND SIZES'):
+    def sizes(self, words, sprites='sprites.json', heading='SIZE LINEUP', send=None):
         """A size lineup: the whole page is every item at true scale (README: Size lineups). It takes
         the place of every other component; words is the line under the heading."""
         self.part('SIZES')
-        self.lineup = (words, sprites, heading, send)
+        self.lineup = (words, sprites, heading)
         try:
             d = json.loads((self.assets / sprites).read_text())
             self.items_ += [(i['id'], ' · '.join(x for x in (i.get('name'), i.get('use')) if x)) for i in d.get('items', [])]
@@ -398,7 +398,7 @@ class Page:
             pass  # bundle() reads the file again and fails there with the reason
 
     def _lineup(self):
-        words, sprites, heading, send = self.lineup
+        words, sprites, heading = self.lineup
         zoom = el('div', el('button', '−', cls='kbtn', id='zout', type='button', aria_label='Zoom out'), el('output', id='zread'),
                   el('button', '+', cls='kbtn', id='zin', type='button', aria_label='Zoom in'),
                   el('button', 'FIT ALL', cls='kbtn', id='zfit', type='button'),
@@ -414,23 +414,20 @@ class Page:
                      el('button', 'CLOSE', cls='kbtn', id='sclose', type='button', style='margin-left:auto'), cls='srow'),
                   cls='sfloat', id='sdock', data_item='', data_name='', data_asks='more', hidden=True, aria_live='polite')
         picks = el('div', el('div', el('h3', 'SIZE CHANGES'), el('button', 'HIDE', cls='kbtn shide', id='sfold', type='button', aria_expanded='true'), cls='srow'),
-                   el('pre'), el('div', el('button', send, cls='kbtn send', data_send=True),
-                                  el('button', 'Voice notes follow in chat', cls='tog', data_notes=True, aria_pressed='true'),
-                                  el('button', 'COPY', cls='kbtn gold', data_copy=True), el('button', 'UNDO ALL', cls='kbtn', id='sundo', type='button'),
+                   el('pre'), el('div', el('button', 'COPY', cls='kbtn gold', data_copy=True), el('button', 'UNDO ALL', cls='kbtn', id='sundo', type='button'),
                                   el('span', cls='ok'), cls='row'), cls='picks sfloat')
         return (el('canvas', id='sky', aria_label='Every item at true scale. Drag to pan, scroll or pinch to zoom, click one to resize it.').render()
                 + el('div', el('div', el('h1', heading), el('p', words), cls='sbrand'), zoom, cls='stop').render()
                 + dock.render() + picks.render()
                 + el('script', raw(f'@@FILE:{sprites}@@'), type='application/json', id='sizes').render())
 
-    # ---- the send box, and the page's own extras
-    def picks(self, format=None, heading='YOUR PICKS', send='SEND PICKS'):
-        """The picks. Standalone it is the copy box with SEND PICKS and COPY; on the board the board's
-        own send bar takes its place. format: "THING: {layout}; {motion}" ({items} by default)."""
+    # ---- the copy box, and the page's own extras
+    def picks(self, format=None, heading='YOUR PICKS', send=None):
+        """The picks. Standalone it is the copy box with COPY; on the board the board's own send bar
+        takes its place (send is ignored, kept so older make.py files still build).
+        format: "THING: {layout}; {motion}" ({items} by default)."""
         box = el('div', el('h3', heading), el('pre', data_format=format),
-                 el('div', el('button', send, cls='kbtn send', data_send=True),
-                    el('button', 'Voice notes follow in chat', cls='tog', data_notes=True, aria_pressed='true'),
-                    el('button', 'COPY', cls='kbtn gold', data_copy=True), el('span', cls='ok'), cls='row'),
+                 el('div', el('button', 'COPY', cls='kbtn gold', data_copy=True), el('span', cls='ok'), cls='row'),
                  cls='picks')
         host = self.here
         last = host.kids[-1] if host.kids else None

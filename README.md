@@ -141,7 +141,7 @@ this table and to a starter or an example, and run `./check.sh`.
    size. The page must stay under 16 MB, so shrink stills with `|w=720`.
 4. **Check.** Run `node $KIT/shot.js page.built.html out/`, then look at `out/*.png`. The run fails
    on a script error, when the page scrolls sideways at phone width, or when a page with a copy box
-   has no `[data-item]`, an item without its label or asks, or no SEND PICKS and voice-notes toggle.
+   has no `[data-item]`, an item without its label or asks, or a copy box without COPY.
 5. **Upload.** End `make.py` with `p.cli()` and upload it with the project's page command (in a
    project with the workflow kit: `slinger_hooks.py page cmsg_THREAD make.py SLUG "the ask"`, or
    `card.py page make.py SLUG "the ask"` in a personal session). It runs `make.py --publish`
@@ -194,7 +194,7 @@ it beside its own send bar, and the board sends the picks and notes back to the 
   reaches the board, and has no storage.
 - A component whose changes are not picks registers `Mock.hostPart(name, {label, get, set, said})`
   (sizes.js and costs.js do), so its state travels in `parts` and comes back on `restore`.
-- Hosted, kit.js shows no copy box or SEND PICKS (a size lineup keeps its list and UNDO ALL), puts
+- Hosted, kit.js shows no copy box (a size lineup keeps its list and UNDO ALL), puts
   the asks on each item's pick row, and gives every labelled item a note line with a mic (⌘D on a
   desktop). It talks to its parent only by `postMessage`:
 
@@ -231,7 +231,7 @@ What pagekit writes, for reading a built page or adding a component.
 
 <div class="picks"><h3>COPY FOR THE CHAT</h3>
   <pre data-format="THING: {layout}; {motion}"></pre>
-  <div class="row"><button class="kbtn send" data-send>SEND PICKS</button><button class="tog" data-notes aria-pressed="true">Voice notes follow in chat</button><button class="kbtn gold" data-copy>COPY</button><span class="ok"></span></div></div>
+  <div class="row"><button class="kbtn gold" data-copy>COPY</button><span class="ok"></span></div></div>
 
 <div class="note" data-item="A" data-asks="more clarify" data-when="layout=A"><h3>CORNER CARD</h3>   <!-- gets "A" and two asks -->
   <div class="pickrow"><div class="seg" data-pick="a" data-verdict></div></div></div>      <!-- Keep / Change / Drop, none picked -->
@@ -250,8 +250,8 @@ What pagekit writes, for reading a built page or adding a component.
 - `{items}` is the default `data-format`: one line per item that holds picks, `E2 Name: Later`.
   Only `{items}` and `{verdicts}` add labels for you; a custom `data-format` or `Mock.picks` names
   them itself, as in `data-say="layout A"`.
-- The standalone build's `.picks` row (COPY, and the older SEND PICKS markup `shot.js` still
-  checks) exists for local checks only; a hosted page hides it and the board's send bar sends.
+- The standalone build's `.picks` row (COPY) exists for local checks only; a hosted page hides it
+  and the board's send bar sends.
 - `{verdicts}` in a `data-format` (or `say('verdicts')` in a custom `Mock.picks`) groups every
   `.seg[data-verdict]` by its pick in button order. Each is named by its item's label and name,
   else `data-verdict="..."`, else its card's `h3`.
@@ -414,7 +414,7 @@ it, edit the EDIT words and build. `examples/sizes/` is a small made-up one.
   picks several: the slider scales them together, a length sets them all to it, SAME SIZE AS
   matches the rest to the first, and ALL N OF THESE picks every use of one sprite. SIZE
   CHANGES lists `N12 Name · use: 14.5 → 18.0 u (×1.24)` per
-  change; SEND SIZES and COPY carry it like any picks, and the sizes stay in the viewer's browser
+  change; COPY and the board's send bar carry it like any picks, and the sizes stay in the viewer's browser
   until Undo all, kept by sprite, use and length (so a new bake that renumbers labels cannot move them) and
   started afresh by a new `data-round`.
   `Mock.sizeAt(id)` gives an item's screen point, for a test to click it.
@@ -446,7 +446,7 @@ copy box.
   every number. Hold and drag the empty chart to zoom (up and down) and slide; a finger only
   slides, and − + FIT ALL zoom. Narrower than STACK_W, each name sits over its bar.
 - Each change is a line, `REFINERY research ORE: 100 → 120`, under the chart's label when it is an
-  item; SEND and COPY carry them. Edits stay per viewer until UNDO ALL, keyed by the chart and
+  item; COPY and the board's send bar carry them. Edits stay per viewer until UNDO ALL, keyed by the chart and
   the round banner's round, and an edit whose row or part left the data is dropped.
   The lines follow the page's own picks (`Mock.extras`), so a chart sits beside pickers and verdicts.
   `Mock.costAt(chart, id, what)` gives a row's name, or a part's `end`, `knob` or resource piece, on

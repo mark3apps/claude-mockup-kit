@@ -188,13 +188,6 @@ kbd { font: 600 11px var(--k-data); border: 1px solid var(--k-line2); border-rad
 .kasks .ok { font: 600 11px var(--k-data); color: var(--k-green); }
 .tag.done { color: #e2ffee; border-color: rgba(125, 255, 184, .6); background: rgba(125, 255, 184, .1); }
 
-/* ---- the send box: SEND PICKS first, the voice-notes toggle, COPY, and why a send cannot go */
-.kbtn.send { font-weight: 700; letter-spacing: 1px; color: #07060f; border-color: var(--k-gold); background: var(--k-gold); }
-.kbtn.send:hover:not(:disabled) { background: #ffd88a; border-color: #ffd88a; }
-.kbtn.send:disabled { opacity: .45; cursor: not-allowed; }
-.kbtn.send.sent::after { content: " ✓"; }
-.picks .kstate { margin-left: auto; font: 600 10.5px var(--k-data); letter-spacing: 1.5px; color: #ffb45e; }
-.picks .kstate.on { color: var(--k-green); }
 .kbtn[hidden] { display: none; }
 
 /* ---- answers on the page: Clarify rewrites an item as steps, Show me in context adds a view */

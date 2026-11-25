@@ -549,86 +549,23 @@
     keymap.__escStills = () => { if (lb && lb.classList.contains('on')) { lb.classList.remove('on'); return true; } return false; };
   }
 
-  // Sends post through the comments capability (publish with {"comments": {}}); a press wakes the
-  // thread that published the page. Where it cannot send, an ask copies its text instead and SEND
-  // PICKS waits, disabled, with the reason beside it: COPY always works.
+  // Hosted, an ask goes to the board's shell, which sends it to the thread; standalone (a local
+  // check) it copies its text.
   const ASKS = {
     more: ['Tell me more', 'Explain this item in chat: background, context, why it is here.'],
     clarify: ['Clarify', "I don't follow it. Break this item down on the page, step by step, and tell me in chat when it's up."],
     context: ['Show me in context', 'Show this item in context on the page: drawn into the app at real size, or animated if it moves.'],
     animate: ['Animate', 'Turn this picture into a short animation on the page, from real frames of the app where possible.'],
   };
-  const WHY = {
-    available: 'LINKED · SENDS REACH THE THREAD',
-    writers_only: "ONLY THE PAGE'S EDITORS CAN SEND · USE COPY",
-    no_session: 'NO THREAD IS LISTENING · USE COPY',
-    off: 'NOT LINKED · USE COPY',
-  };
-  let comments = null;
-  let canSend = 'off';
   const pageName = () => document.title.trim() || 'Mock-up';
   function flash(btn, t) {
     const ok = btn.parentElement.querySelector('.ok');
     if (!ok) return;
     ok.textContent = t; clearTimeout(ok.h); ok.h = setTimeout(() => ok.textContent = '', 3200);
   }
-  function sendState() {
-    const ok = canSend === 'available';
-    $$('[data-send]').forEach(b => { b.hidden = false; b.disabled = !ok; });
-    $$('.picks .kstate').forEach(s => { s.textContent = WHY[canSend] || WHY.off; s.classList.toggle('on', ok); });
-    $$('.kask').forEach(b => { b.title = ok ? 'Ask the thread' : 'Copies this ask for the chat'; });
-  }
-  async function checkSend() {
-    if (run.signal.aborted || !comments) return;
-    try { canSend = await comments.canSendToClaude(); } catch (e) { canSend = 'off'; }
-    if (!run.signal.aborted) sendState();
-  }
-  // A send that cannot go copies its own text instead, so the fallback is always the right line.
   async function fallback(btn, text, why) {
     try { await navigator.clipboard.writeText(text); flash(btn, `${why}COPIED · PASTE IT IN THE CHAT`); }
     catch (e) { flash(btn, `${why}${text}`); }
-  }
-  // sendToClaude refuses over 4096 bytes of UTF-8 (→ × · are three each), and every send needs its
-  // own press: a longer text goes in parts on line breaks, one press each, "PART 2 OF 3" on the button.
-  const SEND_MAX = 3900;
-  const bytes = t => new TextEncoder().encode(t).length;
-  function parts(head, body) {
-    let out = [];
-    let cur = [];
-    const room = SEND_MAX - bytes(head) - 40;
-    body.split('\n').forEach(l => {
-      if (bytes(l) > room && cur.length) { out.push(cur); cur = []; }
-      while (bytes(l) > room) { let n = l.length; while (bytes(l.slice(0, n)) > room) n = Math.floor(n * .9); out.push([l.slice(0, n)]); l = l.slice(n); }
-      if (bytes([...cur, l].join('\n')) > room) { out.push(cur); cur = []; }
-      cur.push(l);
-    });
-    if (cur.length) out.push(cur);
-    out = out.filter(c => c.some(l => l.trim()));
-    return out.length < 2 ? [`${head}\n${body}`] : out.map((c, i) => `${head} · PART ${i + 1} OF ${out.length}\n${c.join('\n')}`);
-  }
-  function sendParts(btn, el, head, body) {
-    const all = parts(head, body);
-    const key = all.join('\u0000');
-    if (btn.kparts?.key !== key) btn.kparts = { key, all, i: 0, label: btn.kparts?.label || btn.textContent };
-    const k = btn.kparts;
-    const text = k.all[k.i];
-    send(btn, el, text, () => {
-      k.i = (k.i + 1) % k.all.length;
-      btn.textContent = k.i ? `SEND PART ${k.i + 1} OF ${k.all.length}` : k.label;
-    });
-  }
-  async function send(btn, el, text, done) {
-    if (bytes(text) > 4096) return fallback(btn, text, 'TOO LONG TO SEND · ');
-    btn.disabled = true;
-    try {
-      await comments.sendToClaude({ anchor: await comments.anchorFor(el), text });
-      btn.classList.add('sent');
-      flash(btn, 'SENT TO THE THREAD');
-      if (done) done();
-    } catch (e) {
-      fallback(btn, text, `NOT SENT (${(e && e.code) || 'error'}) · `);
-      if (e && e.code === 'claude_unavailable') checkSend();
-    } finally { btn.disabled = btn.matches('[data-send]') && canSend !== 'available'; }
   }
   function ask(btn) {
     const it = btn.closest('[data-item]');
@@ -637,17 +574,7 @@
     if (fb) return flipPlay(fb, true);
     const text = `${pageName()} · ${itemTitle(it)}\n${ASKS[k][0]}: ${ASKS[k][1]}`;
     if (HOSTED) return post('ask', { item: it.dataset.item, name: itemName(it), ask: k, words: ASKS[k][0], text });
-    if (canSend === 'available') return send(btn, it, text);
     fallback(btn, text, '');
-  }
-  function sendPicks(btn) {
-    const picks = picksText();
-    if (!picks.trim()) return flash(btn, 'NOTHING PICKED YET');
-    const v = document.querySelector('.picks [data-notes]');
-    const tail = !v ? '' : v.getAttribute('aria-pressed') === 'true'
-      ? '\n\nVoice notes follow in chat: wait for them before acting.'
-      : '\n\nNo voice notes coming: go ahead on these picks.';
-    sendParts(btn, btn.closest('.picks') || btn, `${pageName()} · PICKS`, `${picks}${tail}`.replace(/^\n+/, ''));
   }
   function wireItems() {
     $$('[data-item]').forEach(it => {
@@ -670,21 +597,6 @@
       }
     });
   }
-  async function wireSend() {
-    if (HOSTED) return;
-    $$('.picks [data-send]').forEach(b => {
-      if (b.parentElement.querySelector('.kstate')) return;
-      const s = document.createElement('span'); s.className = 'kstate'; s.setAttribute('aria-live', 'polite');
-      b.parentElement.append(s);
-    });
-    sendState();
-    try { comments = await window.claude?.use?.('comments'); } catch (e) { comments = null; }
-    if (!comments || run.signal.aborted) return;
-    // Watching sessions are learned after load, so the first answer can be no_session.
-    await checkSend();
-    [4000, 12000].forEach(ms => setTimeout(checkSend, ms));
-  }
-
   // A stat table: a cell with data-was="120" that now says 140 shows "120 → 140", marked. With
   // data-pick-rows each labelled row gets its own Keep / Change / Drop.
   function wireStats() {
@@ -817,8 +729,7 @@
     try {
       const s = {};
       pickers().forEach(p => { s[p.key] = state[p.key]; });
-      const v = document.querySelector('.picks [data-notes]');
-      localStorage.setItem(saveKey(), JSON.stringify({ s, v: v ? v.getAttribute('aria-pressed') : null }));
+      localStorage.setItem(saveKey(), JSON.stringify({ s }));
     } catch (e) { /* storage blocked: the picks just are not kept */ }
   }
   function restore() {
@@ -831,8 +742,6 @@
       const open = v === '' && document.querySelector(`.seg[data-pick="${p.key}"][data-verdict]`);
       if (p.kind === 'tog' ? typeof v === 'boolean' : open || p.values.includes(v)) state[p.key] = v;
     });
-    const v = document.querySelector('.picks [data-notes]');
-    if (v && (d.v === 'true' || d.v === 'false')) v.setAttribute('aria-pressed', d.v);
   }
 
   // ---- hosted on the board. The page runs in a sandboxed frame (no same origin, no storage) and
@@ -1080,10 +989,8 @@
       if (t.dataset.toast) toast(t.dataset.toast);
       if (t.hasAttribute('data-replay')) replay();
       if (t.hasAttribute('data-copy')) copy(t);
-      if (t.hasAttribute('data-send') && comments) sendPicks(t);
       if (t.hasAttribute('data-ask')) ask(t);
       if (t.hasAttribute('data-flip')) flipButton(t);
-      if (t.hasAttribute('data-notes')) { t.setAttribute('aria-pressed', String(t.getAttribute('aria-pressed') !== 'true')); save(); }
     }, on);
     document.addEventListener('keydown', e => {
       const t = e.target;
@@ -1098,7 +1005,7 @@
     }, on);
     wireItems(); wireFlips();
     if (HOSTED) wireHost();
-    wireStagebars(); wirePhone(); wireCompare(); wireStills(); wireInsets(); wireSend();
+    wireStagebars(); wirePhone(); wireCompare(); wireStills(); wireInsets();
     addEventListener('resize', fit, on); fit();
     $$('.stage > img.hudl').forEach(i => { if (!i.complete) i.addEventListener('load', layout, on); });
     if (document.fonts) document.fonts.ready.then(() => { if (!run.signal.aborted) layout(); });

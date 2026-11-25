@@ -81,7 +81,7 @@ class Builder(unittest.TestCase):
 
     def test_standalone_source_has_the_kit_and_send(self):
         h = self.page().render()
-        for x in ('<meta charset="utf-8">', '@@KIT_CSS@@', '@@KIT_JS@@', '@@APP_CSS@@', 'data-send'):
+        for x in ('<meta charset="utf-8">', '@@KIT_CSS@@', '@@KIT_JS@@', '@@APP_CSS@@', 'data-copy'):
             self.assertIn(x, h)
 
     def test_bundle_keeps_kit_markers_and_uploads_pictures(self):
