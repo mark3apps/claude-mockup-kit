@@ -465,6 +465,7 @@ class Page:
         top = '' if hosted else '<meta charset="utf-8">\n'
         return (f'{top}<title>{esc(self.title)}</title>\n'
                 + ('' if hosted else '<meta name="claude:viewport-fit-sides" content="cover">\n')
+                + (f'<meta name="mock-round" content="{esc(self.round_n)}">\n' if self.round_n is not None else '')
                 + ''.join(self.head_) + f'<style>\n{css}\n</style>\n\n' + body + '\n\n<script>\n@@KIT_JS@@\n</script>'
                 + ''.join(f'\n<script>\n@@{p}_JS@@\n</script>' for p in parts) + page_js + '\n')
 

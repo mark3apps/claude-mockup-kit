@@ -189,10 +189,12 @@ it beside its own send bar, and the board sends the picks and notes back to the 
 - The `html` is the page with every placeholder filled except the kit's own (`@@KIT_CSS@@`,
   `@@KIT_JS@@` and the perf, sizes and costs parts), and pictures as relative `files/<name>`. No
   pictures inlined, so no 16 MB limit; the page itself stays under 2 MB.
-- The board serves the kit from this repo's main: `hosted.frame(content, base)` fills those
+- The board serves the kit from this repo's main: The round is in `<meta name="mock-round">`. `hosted.frame(content, base)` fills those
   placeholders, adds `<meta name="mock-host" content="board">` and a `<base>` where `files/` is
   served. The board frames that document sandboxed (scripts, no same origin), so page script never
   reaches the board, and has no storage.
+- A component whose changes are not picks registers `Mock.hostPart(name, {label, get, set, said})`
+  (sizes.js and costs.js do), so its state travels in `parts` and comes back on `restore`.
 - Hosted, kit.js shows no copy box or SEND PICKS (a size lineup keeps its list and UNDO ALL), puts
   the asks on each item's pick row, and gives every labelled item a note line with a mic (⌘D on a
   desktop). It talks to its parent only by `postMessage`:
@@ -200,11 +202,11 @@ it beside its own send bar, and the board sends the picks and notes back to the 
 | Way | Message | When |
 |---|---|---|
 | page → board | `{mockkit: 1, type: 'ready', v: 1, title, round, items: [{label, name}]}` | once the kit has started |
-| page → board | `{type: 'state', picks, state, notes: {label: words}, summary, picked, total, focus}` | after every pick and note change; `summary` reads `E1 Keep · E2 Change · E3 not picked yet`, `focus` is the item dictation would write into |
+| page → board | `{type: 'state', picks, state, notes: {label: words}, parts, summary, picked, total, focus}` | after every pick, note and component change; `summary` reads `E1 Keep · E2 Change · E3 not picked yet`; `parts` is each component's own state (a size lineup's sizes, a cost chart's edits), which the board keeps with the draft and the sent round; `picked`/`total` count items with pickers plus one per such component; `focus` is the item dictation would write into |
 | page → board | `{type: 'ask', item, name, ask, words, text}` | an ask pressed (Animate on an item with a flipbook plays it instead) |
 | page → board | `{type: 'mic', item, key}` | the mic pressed, or ⌘D anywhere in the page (`key: true`) |
 | page → board | `{type: 'key', key: 'Escape'}` | Esc the page itself does not use |
-| board → page | `{mockshell: 1, type: 'restore', state, notes}` | a draft or a sent round's picks and notes |
+| board → page | `{mockshell: 1, type: 'restore', state, notes, parts}` | a draft or a sent round's picks, notes and component state |
 | board → page | `{type: 'note', item, text}` | dictated words: the note's whole text so far |
 | board → page | `{type: 'listen', item}` | that note box shows listening (red); `item: null` stops |
 | board → page | `{type: 'mic', why}` | why dictation cannot work here (the mics dim and say it); `why: ''` clears it |

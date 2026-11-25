@@ -530,6 +530,17 @@
       for (let j = 0; j <= i; j++) v += cost(sg.s, j) * W8[j];
       return pt(sg.x0 + v / GEO.per - 1, by + BH / 2);
     }
+    // On the board the edits travel with the draft and the sent round (README: Hosted pages).
+    Mock.hostPart(`costs:${cid}`, {
+      label: box.dataset.item || cid.toUpperCase(),
+      get: () => ({ ...E }),
+      set: o => {
+        E = {};
+        for (const [k, v] of Object.entries(o || {})) { try { if (base(k) !== v && v >= 0) E[k] = v; } catch (e) { /* stale */ } }
+        save(); changed();
+      },
+      said: () => { const n = Object.keys(E).length; return n ? `${n} change${n > 1 ? 's' : ''}` : ''; },
+    });
     render();
     // The chart is an item when it has data-item: its lines then sit under its label.
     const head = [box.dataset.item, box.dataset.name || D.title].filter(Boolean).join(' ');

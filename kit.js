@@ -842,9 +842,10 @@
   //   from the shell restore {state, notes}, note {item, text}, listen {item|null}, mic {why},
   //                  asked {item, ask}
   const notes = {};
+  const hostParts = {};
   let lastItem = null;
   const post = (type, o = {}) => { if (window.parent !== window) window.parent.postMessage({ mockkit: 1, type, ...o }, '*'); };
-  const roundOf = () => document.querySelector('.round[data-round]')?.dataset.round || null;
+  const roundOf = () => document.querySelector('.round[data-round]')?.dataset.round || document.querySelector('meta[name="mock-round"]')?.content || null;
   const labelled = () => $$('[data-item]').filter(it => it.dataset.item);
   const hostItems = () => labelled().map(it => ({ label: it.dataset.item, name: itemName(it) }));
   const noteOf = label => document.querySelector(`.knline [data-note="${CSS.escape(label)}"]`);
@@ -901,10 +902,18 @@
       if (ps.length) { total++; if (says.length) picked++; line.push(`${l} ${says.length ? says.join(', ') : 'not picked yet'}`); }
       else if ((notes[l] || '').trim()) line.push(`${l} note`);
     });
+    const parts = {};
+    Object.entries(hostParts).forEach(([n, pt]) => {
+      parts[n] = pt.get();
+      if (!pt.label) return;
+      const w = pt.said ? pt.said() : '';
+      total++; if (w) picked++;
+      line.push(`${pt.label} ${w || 'not changed yet'}`);
+    });
     const s = {};
     pickers().forEach(p => { s[p.key] = state[p.key]; });
     const said = Object.fromEntries(Object.entries(notes).filter(([, v]) => v.trim()));
-    return { picks: picksText(), state: s, notes: said, summary: line.join(' · '), picked, total, focus: noteItem() };
+    return { picks: picksText(), state: s, notes: said, parts, summary: line.join(' · '), picked, total, focus: noteItem() };
   }
   let tellT = 0;
   function tellShell() {
@@ -946,6 +955,7 @@
           if (p && (p.kind === 'tog' ? typeof v === 'boolean' : open || p.values.includes(v))) state[k] = v;
         });
         Object.entries(d.notes || {}).forEach(([l, v]) => { if (typeof v === 'string') notes[l] = v; });
+        Object.entries(d.parts || {}).forEach(([n, v]) => { try { hostParts[n]?.set(v); } catch (err) { /* a part the page no longer has */ } });
         render('restore');
         labelled().forEach(it => showNote(it.dataset.item));
       } else if (d.type === 'note' && typeof d.text === 'string' && d.item) {
@@ -1138,7 +1148,11 @@
     state, set, say, toast, replay, pickers, holds, fit, frame, layout, overlaps, player, sprite, sprites, ready,
     hosted: HOSTED, notes,
     // Redraws the copy box after a change that is not a pick (a page with its own Mock.picks).
-    refresh() { const pre = document.querySelector('.picks pre'); if (pre) pre.textContent = picksText(); save(); },
+    refresh() { const pre = document.querySelector('.picks pre'); if (pre) pre.textContent = picksText(); save(); if (HOSTED) tellShell(); },
+    // A component whose changes are not picks (a size lineup, a cost chart) hands them to the board so a
+    // draft and a sent round carry them: get() a JSON-able value, set(value) puts it back, said() the
+    // words for the summary ('' while nothing changed). Counted as one item under label.
+    hostPart(name, part) { hostParts[name] = part; return this; },
     // A keep-out for this render only (call it from Mock.on): [x0, y0, x1, y1] in stage pixels.
     keep(box, name, stage) { keepsNow.push({ box, name: name || `keep-out ${box.join(',')}`, st: stage }); return this; },
     ship(x, y, len, name) { return this.keep([x - len * .6, y - len * .6, x + len * .6, y + len * .6], name || 'a ship'); },

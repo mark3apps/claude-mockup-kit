@@ -92,6 +92,33 @@ async function hosted(frameDoc, out, settle) {
       if (!back.live) errs.push('the shell\'s listen did not light the note box');
       await p.evaluate(() => window.tell({ type: 'listen', item: null }));
     });
+    // A change a component reports through Mock.refresh (a size, a cost) must reach the shell, and its
+    // hostPart state must come back on restore in a fresh page, as a reopened round does.
+    let sent = null;
+    await run(1220, 960, 'parts', async (p, f) => {
+      const last = () => p.evaluate(() => window.got.filter(x => x.type === 'state').pop());
+      await f.evaluate(() => { Mock.extras.push(() => 'X1 probe'); Mock.refresh(); });
+      await p.waitForTimeout(250);
+      if (!((await last())?.picks || '').includes('X1 probe')) errs.push('a change through Mock.refresh did not reach the shell');
+      const parts = await f.evaluate(() => {
+        const out = {};
+        const sz = document.querySelector('script#sizes');
+        if (sz) { const it = JSON.parse(sz.textContent).items[0]; out.sizes = { [`${it.key}|${it.use || ''}|${it.len}`]: 2 }; }
+        document.querySelectorAll('.costchart[data-src]').forEach(b => {
+          const D = JSON.parse(document.getElementById(b.dataset.src).textContent);
+          const s = D.rows.flatMap(r => r.segs).find(x => !x.fixed && !x.placeholder);
+          out[`costs:${b.id || b.dataset.src}`] = { [`${s.id}|${D.resources[0].key}`]: (s.costs?.[D.resources[0].key] || 0) + 25 };
+        });
+        return out;
+      });
+      if (!Object.keys(parts).length) return;
+      await p.evaluate(m => window.tell({ type: 'restore', state: {}, notes: {}, parts: m }), parts);
+      await p.waitForTimeout(400);
+      sent = await last();
+      const miss = Object.keys(parts).filter(n => JSON.stringify(sent?.parts?.[n]) !== JSON.stringify(parts[n]));
+      if (miss.length) errs.push(`restore did not put back ${miss.join(', ')}`);
+      if (!sent || !sent.picked) errs.push(`a restored change is not counted as picked (${sent && sent.summary})`);
+    });
     await run(390, 728, 'phone');
   } finally {
     await b.close();
