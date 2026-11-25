@@ -837,10 +837,10 @@
 
   // ---- hosted on the board. The page runs in a sandboxed frame (no same origin, no storage) and
   // talks to the board's shell only by postMessage (README: Hosted pages has every message):
-  //   to the shell   ready {v, title, round, items}, state {picks, state, notes, summary, picked,
-  //                  total, focus}, ask {item, name, ask, words, text}, mic {item, key}, key {key}
-  //   from the shell restore {state, notes}, note {item, text}, listen {item|null}, mic {why},
-  //                  asked {item, ask}
+  //   to the shell   ready {v, title, round, items}, state {picks, state, notes, parts, summary,
+  //                  picked, total, focus}, ask {item, name, ask, words, text}, mic {item, key}, key {key}
+  //   from the shell restore {state, notes, parts}, note {item, text}, listen {item|null}, mic {why},
+  //                  asked {item, ask}. parts: each Mock.hostPart component's own state.
   const notes = {};
   const hostParts = {};
   let lastItem = null;
