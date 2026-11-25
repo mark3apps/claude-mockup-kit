@@ -483,6 +483,13 @@
     .map(i => `${i.id} ${i.name}${i.use ? ` · ${i.use}` : ''}: ${i.len.toFixed(1)} → ${(i.len * i.k).toFixed(1)} ${U} (×${i.k.toFixed(2)})`)
     .join('\n');
 
+  // On the board the sizes travel with the draft and the sent round (README: Hosted pages).
+  Mock.hostPart('sizes', {
+    label: 'SIZES',
+    get: () => Object.fromEntries(items.filter(i => i.k !== 1).map(i => [sid(i), i.k])),
+    set: o => { items.forEach(i => { const k = Number(o && o[sid(i)]); i.k = k > 0 ? clampK(k) : 1; }); rebase(); save(); relayout(); if (sel) fill(); draw(); Mock.refresh(); },
+    said: () => { const n = items.filter(i => i.k !== 1).length; return n ? `${n} size change${n > 1 ? 's' : ''}` : ''; },
+  });
   addEventListener('resize', () => { size(); draw(); }, sig);
   showFilter(); size(); relayout(); fit();
   Mock.refresh();

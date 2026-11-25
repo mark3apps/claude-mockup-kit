@@ -274,3 +274,49 @@ button.rchip { cursor: pointer; }
   .seg { gap: 8px; }
   .stagebar .kbtn { min-height: 36px; padding: 6px 12px; font-size: 11px; }
 }
+
+/* ---- columns (pagekit columns()): side by side, one under another on a narrow page */
+.kcols { display: grid; grid-template-columns: var(--cols, minmax(0, 1fr) 360px); gap: 14px; align-items: start; }
+.kcols > * { min-width: 0; }
+@media (max-width: 860px) { .kcols { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- hosted on the board (kit.js wireHost): the board's send bar replaces the copy box, the asks join
+   the pick row, and every item has a note line with a mic. Sizes from the approved round 2 page. */
+html.khosted .picks:not(.sfloat), html.khosted .picks .row > :not(#sundo) { display: none; }
+html.khosted .picks.sfloat .row #sundo { display: inline-block; }
+html.khosted .page { max-width: 1280px; gap: 16px; padding: 22px 28px 40px; }
+html.khosted .below { grid-template-columns: 1fr; }
+html.khosted .pitch .pickrow > span:not(.kasks) { display: none; }
+html.khosted .pitch .body { padding: 12px 18px; gap: 8px; }
+html.khosted .kask { border-style: solid; color: var(--k-dim); border-color: var(--k-line2); background: var(--k-panel2); font-size: 11px; padding: 5px 9px; }
+html.khosted .kask.sent { color: var(--k-green); border-color: var(--k-green); }
+@media (min-width: 861px) { html.khosted .pitch { grid-template-columns: 250px minmax(0, 1fr); } html.khosted .pitch .art svg { max-height: 132px; } }
+.knline { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
+.knline > span { font: 600 10px var(--k-data); letter-spacing: 2px; color: var(--k-dim); }
+.knrow > td { padding-top: 0; border-top: none; white-space: normal; }
+.ninp { display: flex; align-items: center; gap: 10px; border: 1px solid var(--k-line2); border-radius: 6px; background: #0b0816; padding: 7px 11px; }
+.ninp textarea { flex: 1; min-width: 0; display: block; margin: 0; padding: 0; border: 0; outline: 0; background: none; resize: none; overflow: hidden; font: 13.5px/1.45 var(--k-ui); color: #f1ecff; }
+.ninp textarea::placeholder { color: rgba(196, 180, 240, .5); }
+.ninp:focus-within { border-color: var(--k-chrome); }
+.page .ninp textarea:focus-visible { outline: none; }
+.ninp.has { border-color: var(--k-cyan); }
+.mic { all: unset; display: inline-flex; align-items: center; gap: 6px; flex: none; color: var(--k-dim); cursor: pointer; }
+.mic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.mic kbd { font: 600 10px var(--k-data); border: 1px solid var(--k-line2); border-radius: 3px; padding: 0 5px; color: var(--k-dim); }
+.mic:hover, .mic:focus-visible { color: var(--k-ink); }
+.mic.off { opacity: .45; }
+.mic.on { color: #ff6b6b; } .mic.on svg rect { fill: #ff6b6b; }
+.ninp.live { border-color: #ff6b6b; box-shadow: 0 0 0 3px rgba(255, 107, 107, .18); animation: kmic 1.2s ease-in-out 5 alternate; }
+@keyframes kmic { to { box-shadow: 0 0 0 6px rgba(255, 107, 107, .08); } }
+@media (prefers-reduced-motion: reduce) { .ninp.live { animation: none; } }
+@media (max-width: 700px) {
+  html.khosted .page { padding: 14px 12px 32px; gap: 12px; }
+  html.khosted .page h1 { font-size: 18px; letter-spacing: 3px; }
+  html.khosted .pitch .body { padding: 10px 12px 12px; gap: 9px; }
+  html.khosted .pitch .art { padding: 6px; } html.khosted .pitch .art svg { height: 84px; }
+  html.khosted .pickrow .seg[data-verdict] { flex: 1 1 100%; } html.khosted .pickrow .seg[data-verdict] button { flex: 1; padding: 12px 0; font-size: 14px; }
+  html.khosted .kask { padding: 9px 10px; font-size: 12px; }
+  .knline { grid-template-columns: minmax(0, 1fr); } .knline > span { display: none; }
+  .ninp { padding: 11px 12px; } .ninp textarea { font-size: 16px; } /* 16 px: iOS zooms the page into a smaller field */
+  .mic kbd { display: none; } .mic svg { width: 20px; height: 20px; }
+}

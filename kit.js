@@ -10,6 +10,9 @@
   const listeners = [];
   const keymap = {};
   let fitMode = 'auto';
+  // Hosted: the board frames the page (README: Hosted pages). It has no send box of its own; each
+  // item gets a note line, and the picks, notes and ask presses go to the board's shell, which sends.
+  const HOSTED = document.querySelector('meta[name="mock-host"]')?.content === 'board';
 
   function pickers() {
     const out = {};
@@ -61,12 +64,15 @@
     return c.textContent.trim();
   }
   function itemTitle(it) { return `${it.dataset.item} ${itemName(it)}`.trim(); }
+  function pickersOf(it) {
+    return pickers().filter(p => {
+      const el = document.querySelector(p.kind === 'tog' ? `.tog[data-pick="${p.key}"]` : `.seg[data-pick="${p.key}"]`);
+      return el && el.closest('[data-item]') === it;
+    });
+  }
   function itemsText() {
     return $$('[data-item]').map(it => {
-      const says = pickers().filter(p => {
-        const el = document.querySelector(p.kind === 'tog' ? `.tog[data-pick="${p.key}"]` : `.seg[data-pick="${p.key}"]`);
-        return el && el.closest('[data-item]') === it;
-      }).map(p => say(p.key)).filter(Boolean);
+      const says = pickersOf(it).map(p => say(p.key)).filter(Boolean);
       return says.length ? `${itemTitle(it)}: ${says.join(', ')}` : '';
     }).filter(Boolean).join('\n');
   }
@@ -85,8 +91,8 @@
   // {key} says nothing is dropped, the rest join with ", ".
   function picksText() {
     const pre = document.querySelector('.picks pre');
-    if (!pre) return '';
-    let t = Mock.picks ? Mock.picks(state, say) : (pre.dataset.format || '{items}').split(';').map(item => {
+    if (!pre && !HOSTED) return '';
+    let t = Mock.picks ? Mock.picks(state, say) : (pre?.dataset.format || '{items}').split(';').map(item => {
       let empty = false;
       const s = item.replace(/\{([\w-]+)\}/g, (_, k) => { const w = say(k); if (!w) empty = true; return w; }).trim();
       return empty ? '' : s;
@@ -295,6 +301,7 @@
     if (pre) pre.textContent = picksText();
     save();
     pulse();
+    if (HOSTED) { wireNotes(); tellShell(); }
   }
 
   function set(k, v) { claim(k); state[k] = v; render(k); }
@@ -629,6 +636,7 @@
     const fb = k === 'animate' && it.querySelector('.flip');
     if (fb) return flipPlay(fb, true);
     const text = `${pageName()} · ${itemTitle(it)}\n${ASKS[k][0]}: ${ASKS[k][1]}`;
+    if (HOSTED) return post('ask', { item: it.dataset.item, name: itemName(it), ask: k, words: ASKS[k][0], text });
     if (canSend === 'available') return send(btn, it, text);
     fallback(btn, text, '');
   }
@@ -658,11 +666,12 @@
           box.append(b);
         });
         const ok = document.createElement('span'); ok.className = 'ok'; box.append(ok);
-        (row ? it.lastElementChild : it.querySelector('.body') || it).append(box);
+        (row ? it.lastElementChild : (HOSTED && it.querySelector('.pickrow')) || it.querySelector('.body') || it).append(box);
       }
     });
   }
   async function wireSend() {
+    if (HOSTED) return;
     $$('.picks [data-send]').forEach(b => {
       if (b.parentElement.querySelector('.kstate')) return;
       const s = document.createElement('span'); s.className = 'kstate'; s.setAttribute('aria-live', 'polite');
@@ -826,6 +835,147 @@
     if (v && (d.v === 'true' || d.v === 'false')) v.setAttribute('aria-pressed', d.v);
   }
 
+  // ---- hosted on the board. The page runs in a sandboxed frame (no same origin, no storage) and
+  // talks to the board's shell only by postMessage (README: Hosted pages has every message):
+  //   to the shell   ready {v, title, round, items}, state {picks, state, notes, parts, summary,
+  //                  picked, total, focus}, ask {item, name, ask, words, text}, mic {item, key}, key {key}
+  //   from the shell restore {state, notes, parts}, note {item, text}, listen {item|null}, mic {why},
+  //                  asked {item, ask}. parts: each Mock.hostPart component's own state.
+  const notes = {};
+  const hostParts = {};
+  let lastItem = null;
+  const post = (type, o = {}) => { if (window.parent !== window) window.parent.postMessage({ mockkit: 1, type, ...o }, '*'); };
+  const roundOf = () => document.querySelector('.round[data-round]')?.dataset.round || document.querySelector('meta[name="mock-round"]')?.content || null;
+  const labelled = () => $$('[data-item]').filter(it => it.dataset.item);
+  const hostItems = () => labelled().map(it => ({ label: it.dataset.item, name: itemName(it) }));
+  const noteOf = label => document.querySelector(`.knline [data-note="${CSS.escape(label)}"]`);
+  // Dictation writes into the note being typed in; with none, the item last picked on; else the first.
+  function noteItem() {
+    const f = document.activeElement;
+    if (f && f.dataset && f.dataset.note) return f.dataset.note;
+    return lastItem || labelled()[0]?.dataset.item || null;
+  }
+  const MIC = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="1.5" width="5" height="8" rx="2.5"/><path d="M3 7.5a5 5 0 0 0 10 0M8 12.5v2.5"/></svg><kbd>⌘D</kbd>';
+  function fitNote(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  function showNote(label) {
+    const ta = noteOf(label);
+    if (!ta) return;
+    if (ta.value !== (notes[label] || '')) { ta.value = notes[label] || ''; fitNote(ta); }
+    ta.closest('.ninp').classList.toggle('has', !!ta.value.trim());
+  }
+  // One note line under each labelled item: under a pitch's pick row, at the end of a note card, or
+  // in a row of its own under a table row. Components that redraw their rows get them back here.
+  function wireNotes() {
+    labelled().forEach(it => {
+      const label = it.dataset.item;
+      const had = it.matches('tr') ? it.nextElementSibling?.matches('.knrow') && it.nextElementSibling : it.querySelector(':scope .knline');
+      if (had) {
+        // An item that changes what it is (the size lineup's dock) keeps one line, for the item it is now.
+        const ta = had.querySelector('[data-note]');
+        if (ta.dataset.note !== label) { ta.dataset.note = label; ta.placeholder = `Type or dictate a note on ${label}…`; had.querySelector('[data-mic]').dataset.mic = label; showNote(label); }
+        return;
+      }
+      const line = document.createElement('div'); line.className = 'knline';
+      const tag = document.createElement('span'); tag.textContent = 'NOTE';
+      const box = document.createElement('div'); box.className = 'ninp';
+      const ta = document.createElement('textarea');
+      ta.rows = 1; ta.dataset.note = label; ta.placeholder = `Type or dictate a note on ${label}…`;
+      ta.setAttribute('aria-label', `Note on ${itemTitle(it)}`);
+      const mic = document.createElement('button');
+      mic.type = 'button'; mic.className = 'mic'; mic.dataset.mic = label; mic.title = 'Dictate (⌘D)';
+      mic.setAttribute('aria-label', `Dictate a note on ${label}`);
+      mic.innerHTML = MIC;
+      box.append(ta, mic); line.append(tag, box);
+      if (it.matches('tr')) {
+        const tr = document.createElement('tr'); tr.className = 'knrow';
+        const td = document.createElement('td'); td.colSpan = it.children.length; td.append(line); tr.append(td);
+        it.after(tr);
+      } else (it.querySelector(':scope > .body') || it).append(line);
+      showNote(label);
+    });
+  }
+  function hostState() {
+    let picked = 0, total = 0;
+    const line = [];
+    labelled().forEach(it => {
+      const l = it.dataset.item, ps = pickersOf(it), says = ps.map(p => say(p.key)).filter(Boolean);
+      if (ps.length) { total++; if (says.length) picked++; line.push(`${l} ${says.length ? says.join(', ') : 'not picked yet'}`); }
+      else if ((notes[l] || '').trim()) line.push(`${l} note`);
+    });
+    const parts = {};
+    Object.entries(hostParts).forEach(([n, pt]) => {
+      parts[n] = pt.get();
+      if (!pt.label) return;
+      const w = pt.said ? pt.said() : '';
+      total++; if (w) picked++;
+      line.push(`${pt.label} ${w || 'not changed yet'}`);
+    });
+    const s = {};
+    pickers().forEach(p => { s[p.key] = state[p.key]; });
+    const said = Object.fromEntries(Object.entries(notes).filter(([, v]) => v.trim()));
+    return { picks: picksText(), state: s, notes: said, parts, summary: line.join(' · '), picked, total, focus: noteItem() };
+  }
+  let tellT = 0;
+  function tellShell() {
+    if (!started || tellT) return;
+    tellT = setTimeout(() => { tellT = 0; if (!run.signal.aborted) post('state', hostState()); }, 60);
+  }
+  function wireHost() {
+    document.documentElement.classList.add('khosted');
+    wireNotes();
+    document.addEventListener('input', e => {
+      const l = e.target.dataset && e.target.dataset.note;
+      if (!l) return;
+      notes[l] = e.target.value; fitNote(e.target); showNote(l); lastItem = l; tellShell();
+    }, on);
+    document.addEventListener('focusin', e => { const l = e.target.dataset && e.target.dataset.note; if (l) { lastItem = l; tellShell(); } }, on);
+    document.addEventListener('click', e => {
+      const m = e.target.closest('[data-mic]');
+      if (m) { lastItem = m.dataset.mic; post('mic', { item: m.dataset.mic }); return; }
+      const it = e.target.closest('[data-item]');
+      if (it && it.dataset.item && e.target.closest('.seg[data-pick] button, .tog[data-pick]')) { lastItem = it.dataset.item; tellShell(); }
+    }, on);
+    // A component that redraws its rows (perf's scene table) drops their note lines: put them back.
+    let queued = false;
+    const mo = new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; if (!run.signal.aborted) wireNotes(); });
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+    run.signal.addEventListener('abort', () => mo.disconnect());
+    addEventListener('message', e => {
+      const d = e.data;
+      if (e.source !== window.parent || !d || d.mockshell !== 1) return;
+      if (d.type === 'restore') {
+        const ps = pickers();
+        Object.entries(d.state || {}).forEach(([k, v]) => {
+          const p = ps.find(x => x.key === k);
+          const open = v === '' && document.querySelector(`.seg[data-pick="${CSS.escape(k)}"][data-verdict]`);
+          if (p && (p.kind === 'tog' ? typeof v === 'boolean' : open || p.values.includes(v))) state[k] = v;
+        });
+        Object.entries(d.notes || {}).forEach(([l, v]) => { if (typeof v === 'string') notes[l] = v; });
+        Object.entries(d.parts || {}).forEach(([n, v]) => { try { hostParts[n]?.set(v); } catch (err) { /* a part the page no longer has */ } });
+        render('restore');
+        labelled().forEach(it => showNote(it.dataset.item));
+      } else if (d.type === 'note' && typeof d.text === 'string' && d.item) {
+        notes[d.item] = d.text; lastItem = d.item; showNote(d.item); tellShell();
+      } else if (d.type === 'listen') {
+        $$('.knline .ninp').forEach(b => {
+          const on = !!d.item && b.querySelector('[data-note]').dataset.note === d.item;
+          b.classList.toggle('live', on); b.querySelector('.mic').classList.toggle('on', on);
+        });
+        if (d.item) noteOf(d.item)?.closest('.knline').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else if (d.type === 'mic') {
+        $$('.knline .mic').forEach(m => { m.classList.toggle('off', !!d.why); m.title = d.why || 'Dictate (⌘D)'; });
+      } else if (d.type === 'asked' && d.item) {
+        const it = document.querySelector(`[data-item="${CSS.escape(d.item)}"]`);
+        it?.querySelector(`.kask[data-ask="${CSS.escape(d.ask || '')}"]`)?.classList.add('sent');
+      }
+    }, on);
+  }
+
+
   // A flipbook: real frames of the app stacked in one tall picture (strip.py), played at their own rate.
   // A press plays it once and holds the last frame; Animate on its item does the same.
   function flipShow(fb, i) {
@@ -937,12 +1087,17 @@
     }, on);
     document.addEventListener('keydown', e => {
       const t = e.target;
+      // Cmd-D (Ctrl-D) starts and stops dictation wherever focus is in the page; the shell listens.
+      if (HOSTED && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'd') { e.preventDefault(); post('mic', { item: noteItem(), key: true }); return; }
       if (t.matches && t.matches('input, textarea, select, [contenteditable]')) { if (e.key === 'Escape') t.blur(); return; }
       if (e.key === 'Escape' && keymap.__escStills && keymap.__escStills()) return;
+      // Esc the page does not use closes the board's panel.
+      if (HOSTED && e.key === 'Escape' && !keymap.Escape) { post('key', { key: 'Escape' }); return; }
       const fn = keymap[e.key] || keymap[e.code];
       if (fn) { e.preventDefault(); fn(e); }
     }, on);
     wireItems(); wireFlips();
+    if (HOSTED) wireHost();
     wireStagebars(); wirePhone(); wireCompare(); wireStills(); wireInsets(); wireSend();
     addEventListener('resize', fit, on); fit();
     $$('.stage > img.hudl').forEach(i => { if (!i.complete) i.addEventListener('load', layout, on); });
@@ -950,6 +1105,7 @@
     render(null);
     started = true;
     readyQ.splice(0).forEach(fn => fn());
+    if (HOSTED) { post('ready', { v: 1, title: pageName(), round: roundOf(), items: hostItems() }); tellShell(); }
   }
 
   // fn once the kit has started (the stage's canvases sized, the picks read), or now if it has.
@@ -990,8 +1146,13 @@
 
   window.Mock = {
     state, set, say, toast, replay, pickers, holds, fit, frame, layout, overlaps, player, sprite, sprites, ready,
+    hosted: HOSTED, notes,
     // Redraws the copy box after a change that is not a pick (a page with its own Mock.picks).
-    refresh() { const pre = document.querySelector('.picks pre'); if (pre) pre.textContent = picksText(); save(); },
+    refresh() { const pre = document.querySelector('.picks pre'); if (pre) pre.textContent = picksText(); save(); if (HOSTED) tellShell(); },
+    // A component whose changes are not picks (a size lineup, a cost chart) hands them to the board so a
+    // draft and a sent round carry them: get() a JSON-able value, set(value) puts it back, said() the
+    // words for the summary ('' while nothing changed). Counted as one item under label.
+    hostPart(name, part) { hostParts[name] = part; return this; },
     // A keep-out for this render only (call it from Mock.on): [x0, y0, x1, y1] in stage pixels.
     keep(box, name, stage) { keepsNow.push({ box, name: name || `keep-out ${box.join(',')}`, st: stage }); return this; },
     ship(x, y, len, name) { return this.keep([x - len * .6, y - len * .6, x + len * .6, y + len * .6], name || 'a ship'); },

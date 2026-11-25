@@ -637,11 +637,11 @@
     if (k) { const i = +k.dataset.run; if (hidden.has(i)) hidden.delete(i); else if (hidden.size < (last && last.p ? last.p.runs.length - 1 : 0)) hidden.add(i); redraw(); return; }
     const w = t.closest('#perfDetail [data-mark]');
     if (w) { mark = mark === w.dataset.mark ? null : w.dataset.mark; hidden.delete(+mark?.split(':')[0]); redraw(); $('#perfDetail .pchart.wide')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-    const r = !t.closest('[data-ask]') && t.closest('#perfTable .prow.pick');
+    const r = !t.closest('[data-ask], .knline') && t.closest('#perfTable .prow.pick');
     if (r) { Mock.set('scene', r.dataset.id); $('#perfDetail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   }, sig);
   document.addEventListener('keydown', e => {
-    const r = e.target.closest && !e.target.closest('[data-ask]') && e.target.closest('#perfTable .prow.pick');
+    const r = e.target.closest && !e.target.closest('[data-ask], .knline') && e.target.closest('#perfTable .prow.pick');
     if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); Mock.set('scene', r.dataset.id); }
   }, sig);
 })();

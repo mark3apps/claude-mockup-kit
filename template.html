@@ -1,15 +1,10 @@
 <meta charset="utf-8">
 <title>Thing Mock-ups</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<!-- Starter page. Copy it next to your captures, rename the title, then replace every
-     part marked EDIT. Build: python3 $KIT/build.py page.html -->
+<meta name="mock-round" content="1">
 <style>
 @@APP_CSS@@
 @@KIT_CSS@@
-
-/* ===== EDIT: the mock-ups. Everything above is the kit and the app's own CSS (from your
-   project's add-on; the kit's stand-in without one), so a mock built from the app's classes
-   (.panel, .menubtn, ...) looks like the app. */
 .stage .mk { position: absolute; z-index: 5; top: auto; left: auto; transform: none; min-width: 0; }
 .stage .mkA { left: 40px; bottom: 40px; width: 360px; padding: 18px 20px; }
 .stage .mkB { right: 40px; top: 40px; width: 300px; padding: 16px 18px; }
@@ -20,96 +15,12 @@
 @media (prefers-reduced-motion: reduce) { .stage .mk.motion { animation: none; } }
 </style>
 
-<div class="page">
-  <h1>THING<small>ROUND 1 · 2 LAYOUTS · DRAWN AT THE APP'S REAL SIZE (1440 × 900) OVER A REAL CAPTURE</small></h1>
-  <p class="lede">EDIT: one paragraph on what changes and what stays. Say what can be clicked, which keys work, and which numbers are examples.</p>
-
-  <!-- Pickers. A .seg holds one choice (data-pick = its key, data-v = each value, data-say =
-       the words in the copy box). A .tog is on or off. The first button, or the one with
-       aria-pressed="true", starts picked. -->
-  <div class="controls">
-    <div class="ctl"><span>LAYOUT</span><div class="seg" data-pick="layout">
-      <button data-v="A" data-say="layout A">A · Corner card</button>
-      <button data-v="B" data-say="layout B">B · Side card</button>
-      <button data-v="today" data-say="keep today">Today</button>
-    </div></div>
-    <div class="ctl"><span>SITUATION</span><div class="seg" data-pick="sit">
-      <button data-v="plain" data-say="">Plain</button>
-      <button data-v="busy" data-say="">Busy</button>
-    </div></div>
-    <div class="ctl"><span>MOTION</span><div class="seg">
-      <button class="tog" data-pick="motion" aria-pressed="true" data-say-on="motion on" data-say-off="no motion">Slide in</button>
-      <button class="kbtn" data-replay>↻ Replay</button>
-    </div></div>
-  </div>
-
-  <!-- The stage: the app's window at 1:1 (data-size). Anything with data-when shows only
-       while that holds: "layout=A", "layout=A,B", "layout!=today", "motion", "!motion",
-       several terms joined by spaces must all hold. The stage also carries every pick as
-       data-<key>, for CSS like .stage[data-sit="busy"] .x { ... }. -->
-  <div class="stagebox"><div class="stage" data-size="1440x900">
-    <img class="bg" data-when="layout!=today" alt="" src="@@IMG:shots/01-today.png@@">
-    <img class="bg" data-when="layout=today" alt="Today, captured from the app" src="@@IMG:shots/01-today.png@@">
-
-    <div class="panel mk mkA" data-when="layout=A" id="mkA">
-      <h2>CORNER CARD</h2>
-      <p class="small" data-when="sit=busy">Three things are waiting.</p>
-      <button class="menubtn primary" data-toast="OPENS THE THING">OPEN</button>
-    </div>
-    <!-- A word over the world goes on a .wtag plate; the kit places it beside data-anchor, clear
-         of the HUD, the things named in Mock.ship and other words (README: Readable words). -->
-    <div class="wtag" data-anchor="720,450" data-leader style="--c:#7fe0ff">EDIT A THING<small>WHAT IT IS</small></div>
-    <div class="panel mk mkB" data-when="layout=B" id="mkB">
-      <h2>SIDE CARD</h2>
-      <button class="menubtn" data-set="layout=A">SWITCH TO A</button>
-    </div>
-  </div></div>
-
-  <div class="below">
-    <!-- Every item the reviewer picks on carries a short label (data-item): the kit draws it on the item and
-         adds its asks (data-asks, Tell me more by default), so they can name "A" in the chat or ask about it. -->
-    <div class="notes">
-      <div class="note" data-item="A" data-asks="more clarify context" data-when="layout=A"><h3>CORNER CARD</h3><ul>
-        <li>EDIT: what this option does, one point per line.</li>
-      </ul></div>
-      <div class="note" data-item="B" data-when="layout=B"><h3>SIDE CARD</h3><ul>
-        <li>EDIT: what this option does.</li>
-      </ul></div>
-      <div class="note today" data-item="T" data-when="layout=today"><h3>TODAY</h3><ul>
-        <li>The app as it draws this now.</li>
-      </ul></div>
-    </div>
-    <!-- The copy box. data-format items split on ";"; {key} is the pick's data-say (or its
-         label); an item whose key says nothing is dropped. {items} (the default) gives one line
-         per data-item holding picks, its label first. SEND PICKS and the asks reach the thread only
-         on a page published with capabilities {"comments": {}}; COPY always works. -->
-    <div class="picks">
-      <h3>COPY FOR THE CHAT</h3>
-      <pre data-format="THING: {layout}; {motion}"></pre>
-      <div class="row"><button class="kbtn send" data-send>SEND PICKS</button><button class="tog" data-notes aria-pressed="true">Voice notes follow in chat</button><button class="kbtn gold" data-copy>COPY</button><span class="ok"></span></div>
-    </div>
-  </div>
-
-  <!-- Optional: today vs the mock-up as a drag slider, and every still on one page. -->
-  <h2>TODAY AGAINST THE MOCK-UP</h2>
-  <div class="compare" data-before="TODAY" data-after="LAYOUT A">
-    <img alt="Today" src="@@IMG:shots/01-today.png|w=1440@@">
-    <img alt="Layout A" src="@@IMG:shots/01-today.png|w=1440@@">
-  </div>
-  <h2>STILLS</h2>
-  <div class="stills">
-    <figure><img alt="Today" src="@@IMG:shots/01-today.png|w=720@@" data-full="@@IMG:shots/01-today.png@@"><figcaption><b>TODAY</b>The backdrop, as captured.</figcaption></figure>
-  </div>
-</div>
+<div class="page"><h1>THING MOCK-UPS<small>ROUND 1 · 2 LAYOUTS · DRAWN AT THE APP&#x27;S REAL SIZE (1440 × 900) OVER A REAL CAPTURE</small></h1><p class="lede">EDIT: one paragraph on what changes and what stays. Say what can be clicked, which keys work, and which numbers are examples.</p><div class="controls"><div class="ctl"><span>LAYOUT</span><div data-pick="layout" class="seg"><button data-v="A" data-say="layout A">A · Corner card</button><button data-v="B" data-say="layout B">B · Side card</button><button data-v="today" data-say="keep today">Today</button></div></div><div class="ctl"><span>SITUATION</span><div data-pick="sit" class="seg"><button data-v="plain" data-say="">Plain</button><button data-v="busy" data-say="">Busy</button></div></div><div class="ctl"><span>MOTION</span><div class="seg"><button data-pick="motion" aria-pressed="true" data-say-on="motion on" data-say-off="no motion" class="tog">Slide in</button><button data-replay class="kbtn">↻ Replay</button></div></div></div><div class="stagebox"><div data-size="1440x900" class="stage"><img alt="" src="@@IMG:shots/01-today.png@@" data-when="layout!=today" class="bg"><img alt="Today, captured from the app" src="@@IMG:shots/01-today.png@@" data-when="layout=today" class="bg"><div data-when="layout=A" id="mkA" class="panel mk mkA"><h2>CORNER CARD</h2><p class="small" data-when="sit=busy">Three things are waiting.</p><button data-toast="OPENS THE THING" class="menubtn primary">OPEN</button></div><div data-anchor="720,450" data-leader style="--c:#7fe0ff" class="wtag">EDIT A THING<small>WHAT IT IS</small></div><div data-when="layout=B" id="mkB" class="panel mk mkB"><h2>SIDE CARD</h2><button data-set="layout=A" class="menubtn">SWITCH TO A</button></div></div></div><div class="below"><div class="notes"><div data-item="A" data-asks="more clarify context" data-when="layout=A" class="note"><h3>CORNER CARD</h3><ul><li>EDIT: what this option does, one point per line.</li></ul></div><div data-item="B" data-asks="more" data-when="layout=B" class="note"><h3>SIDE CARD</h3><ul><li>EDIT: what this option does.</li></ul></div><div data-item="T" data-asks="more" data-when="layout=today" class="note today"><h3>TODAY</h3><ul><li>The app as it draws this now.</li></ul></div></div><div class="picks"><h3>COPY FOR THE CHAT</h3><pre data-format="THING: {layout}; {motion}"></pre><div class="row"><button data-send class="kbtn send">SEND PICKS</button><button data-notes aria-pressed="true" class="tog">Voice notes follow in chat</button><button data-copy class="kbtn gold">COPY</button><span class="ok"></span></div></div></div><h2>TODAY AGAINST THE MOCK-UP</h2><div data-before="TODAY" data-after="LAYOUT A" class="compare"><img alt="TODAY" src="@@IMG:shots/01-today.png|w=1440@@"><img alt="LAYOUT A" src="@@IMG:shots/01-today.png|w=1440@@"></div><h2>STILLS</h2><div class="stills"><figure><img alt="TODAY" src="@@IMG:shots/01-today.png|w=720@@" data-full="@@IMG:shots/01-today.png@@"><figcaption><b>TODAY</b>The backdrop, as captured.</figcaption></figure></div></div>
 
 <script>
 @@KIT_JS@@
 </script>
 <script>
-// EDIT: page behaviour beyond what the markup gives. Mock.on runs after every pick
-// (key is the pick that changed, null at start, 'replay' on replay). Keep it inside this
-// wrapper: a republish runs it again in the open window, where a top-level const throws. Animate
-// with Mock.frame(t => ...), which stops when that happens; requestAnimationFrame would not.
 (() => {
 Mock.on((s, key) => {
   Mock.ship(720, 450, 40, 'the thing'); // EDIT: everything on the stage no word may cover
