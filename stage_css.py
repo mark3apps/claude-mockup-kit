@@ -5,8 +5,8 @@
 `scoped(css)` prefixes every rule with `.stage`, turns `:root` / `html` / `body` into the stage
 itself, keeps `@keyframes` and `@media`, drops `@font-face`, and rewrites vw / vh against the stage
 size (the stage is the app's window, not the browser's). The stage keeps its own height: a page's
-`html, body { height: 100% }` made it the scaled box's height, cropping the capture (report #77). A project add-on calls it for its own
-placeholder (README: Project add-ons).
+`html, body { height: 100% }` made it the scaled box's height, cropping the capture (report #77).
+A project add-on calls it for its own placeholder (README: Project add-ons).
 """
 import argparse
 import re
