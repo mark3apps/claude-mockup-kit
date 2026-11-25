@@ -91,6 +91,16 @@ async function hosted(frameDoc, out, settle) {
       if (back.v !== 'From the board') errs.push('the shell\'s restore did not fill the note');
       if (!back.live) errs.push('the shell\'s listen did not light the note box');
       await p.evaluate(() => window.tell({ type: 'listen', item: null }));
+      const free = await f.evaluate(() => {
+        const b = [...document.querySelectorAll('.seg[data-pick] button[data-v][data-say]')].find(x => !x.closest('[data-item]') && x.dataset.say);
+        if (!b) return null;
+        b.setAttribute('data-shot-free', ''); return b.dataset.say;
+      });
+      if (free) {
+        await f.click('[data-shot-free]'); await p.waitForTimeout(200);
+        const s = await last('state');
+        if (!s || !s.summary.split(' · ').includes(free)) errs.push(`a choice outside the items ("${free}") is not in the send text (${s && s.summary})`);
+      }
     });
     // A change a component reports through Mock.refresh (a size, a cost) must reach the shell, and its
     // hostPart state must come back on restore in a fresh page, as a reopened round does.
