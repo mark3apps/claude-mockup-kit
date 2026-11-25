@@ -143,6 +143,14 @@ class Builder(unittest.TestCase):
         old = {k: os.environ.pop(k, None) for k in ('KANBAN_VIEW', 'KANBAN_URL', 'KANBAN_TOKEN')}
         pub = lambda: self.page().publish('looks', 'pick', card='c', board=f'http://127.0.0.1:{srv.server_port}/api', token='t')
         try:
+            answer.update(ok=True, view='/p/c/looks?r=2')
+            self.assertNotIn('link', pub(), 'no url and no KANBAN_VIEW: no link on the API host')
+            os.environ.update(KANBAN_URL=f'http://127.0.0.1:{srv.server_port}/api', KANBAN_TOKEN='t')
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                self.page().cli(['--publish', 'looks', '--ask', 'pick', '--card', 'c'])
+            self.assertEqual(len(out.getvalue().splitlines()), 1, 'only the JSON answer')
+            self.assertIn('KANBAN_VIEW', err.getvalue())
             answer.update(ok=True, view='/p/c/looks?r=2', url='https://board.example:8443/p/c/looks?r=2')
             self.assertEqual(pub()['link'], 'https://board.example:8443/p/c/looks?r=2')
             answer.pop('url')
@@ -200,7 +208,6 @@ class Builder(unittest.TestCase):
             srv.server_close()
             t.join(5)
         self.assertEqual(got['view'], '/p/cmsg_1/looks?r=2')
-        self.assertEqual(got['link'], f'http://127.0.0.1:{srv.server_port}/p/cmsg_1/looks?r=2')
         self.assertEqual(len(seen), 3)
         for path, auth, ctype, _ in seen[:2]:
             self.assertRegex(path, r'^/api/pages/cmsg_1/looks/files/shot-[0-9a-f]{8}\.(png|jpg)\?r=2$')

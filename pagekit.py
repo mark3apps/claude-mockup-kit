@@ -26,7 +26,6 @@ import urllib.error
 import urllib.request
 from contextlib import contextmanager
 from pathlib import Path
-from urllib.parse import urlsplit
 
 KIT = Path(__file__).resolve().parent
 PAGE_MAX = 2 * 1024 * 1024  # the board's body limit for a page's html (handoff: about 2 MB)
@@ -517,7 +516,8 @@ class Page:
         $KANBAN_CARD); slug names the page across rounds; ask is the one line the card shows
         ("Pick on the page: <ask>"). Returns the board's answer with `link`, the full page link for the
         thread's Picks line: the board's own `url`, else $KANBAN_VIEW (where the board's pages are viewed)
-        or the board's origin with the answer's relative `view`."""
+        with the answer's relative `view`. With neither there is no `link`: the API's own host may not
+        serve pages (report #50)."""
         board = (board or os.environ.get('KANBAN_URL', '')).rstrip('/')
         token = token or os.environ.get('KANBAN_TOKEN', '').strip()
         card = card or os.environ.get('KANBAN_CARD', '').strip()
@@ -536,10 +536,9 @@ class Page:
             _call('PUT', f'{base}/files/{name}?r={self.round_n}', token, data, CTYPE[name.rsplit('.', 1)[1]])
         body = dict(self.meta(ask, by or os.environ.get('KANBAN_BY', '') or card), html=text)
         got = _call('PUT', base, token, json.dumps(body).encode(), 'application/json')
-        if isinstance(got, dict) and got.get('view') and not got.get('link'):
-            u = urlsplit(board)
-            got['link'] = got.get('url') or (os.environ.get('KANBAN_VIEW', '').strip().rstrip('/')
-                                             or f'{u.scheme}://{u.netloc}') + got['view']
+        view = os.environ.get('KANBAN_VIEW', '').strip().rstrip('/')
+        if isinstance(got, dict) and not got.get('link') and (got.get('url') or (view and got.get('view'))):
+            got['link'] = got.get('url') or view + got['view']
         return got
 
     def cli(self, argv=None):
@@ -555,7 +554,10 @@ class Page:
         if a.publish:
             got = self.publish(a.publish, a.ask, card=a.card)
             if got.get('link'):
-                print(got['link'])  # a relative view on the board's API host 404'd for the reviewer (report #50)
+                print(got['link'])
+            else:  # a relative view put on the board's API host 404'd for the reviewer (report #50)
+                print('publish: uploaded, but the board gave no full page link and KANBAN_VIEW is not set, so there '
+                      'is no link to post; set KANBAN_VIEW to where the board serves its pages', file=sys.stderr)
             print(json.dumps(got))
         elif a.hosted:
             self.bundle(a.hosted)

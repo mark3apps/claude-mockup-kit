@@ -146,8 +146,9 @@ this table and to a starter or an example, and run `./check.sh`.
    workflow kit has one (`slinger_hooks.py page cmsg_THREAD make.py SLUG "the ask"`, or `card.py page
    make.py SLUG "the ask"` in a personal session), else `python3 make.py --publish SLUG --ask "the ask"
    --card CARD` (Hosted pages). The upload puts the card in Needs Mark, and the first line printed is
-   the page's full board link: paste that line, as printed, into the thread's **Picks:** or
-   **Question:** line, never a `/p/...` path or a link with its port changed. The next round is the
+   the page's full board link (when the board or `$KANBAN_VIEW` gives one; else it says so): paste
+   that line, as printed, into the thread's **Picks:** or **Question:** line, never a `/p/...` path
+   or a link with its host or port changed. The next round is the
    same command with `Page(round=N+1)`.
 6. **Answer.** The reviewer's picks, notes and asks come back as notes on the thread's board card,
    which its hooks show it at its next step. Tell me more: answer in chat, label first. Clarify and
@@ -187,8 +188,10 @@ it beside its own send bar, and the board sends the picks and notes back to the 
   `PUT pages/<card>/<slug>` with `{title, round, html, items: [{label, name}], ask, by}`. `card`
   defaults to `$KANBAN_CARD`; `slug` (lower case, digits, dashes) names the page across rounds;
   `ask` is the one line the card shows. The board takes 1 to 40 items with short labels. Its answer
-  gains `link`, the full page link: the board's own `url`, else `$KANBAN_VIEW` (where the board's
-  pages are viewed, when that is not the API's host) or the API's origin, plus the answer's `view`.
+  gains `link`, the full page link: the board's own `url`, else `$KANBAN_VIEW` plus the answer's
+  `view`. `$KANBAN_VIEW` is the origin the board serves its pages on (scheme, host and port, as
+  `https://board.example:8443`), which may differ from the API's: a project sets it in its threads'
+  environment or its page command. With neither, publish gives no link rather than guess one.
 - The `html` is the page with every placeholder filled except the kit's own (`@@KIT_CSS@@`,
   `@@KIT_JS@@` and the perf, sizes and costs parts), and pictures as relative `files/<name>`. No
   pictures inlined, so no 16 MB limit; the page itself stays under 2 MB.
