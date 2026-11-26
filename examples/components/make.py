@@ -24,6 +24,13 @@ with p.into(row.cells[1]):
 p.player('player', length=12, speeds=(0.25, 1, 4), speed=1, draw='t => window.draw(t)',
          phases=[(0, 'It leaves the lane wide and fast.'), (4, 'The sun bends it round.'), (8, 'It settles into a lap.')])
 
+# A second stage: on a phone each stage stays pinned while its own notes scroll, then this one slides up.
+p.h2('THE DOCK, CLOSE')
+st2 = p.stage('1440x900', cls='dock')
+st2.add(el('div', cls='berth'))
+p.item('M2', 'BERTH RING', points=('The ring lights as the ship lines up.', 'It dims once the ship is held.',
+                                   'A held ship drifts with the dock, not the sun.'), verdict=True)
+
 p.h2('THE NUMBERS')
 p.stats(['SHIP', 'HULL', 'SHIELD', 'RAM DAMAGE'], [
     ('D1', 'Hauler', [('120', '120'), ('40', '40'), ('8', '8')], ''),
@@ -32,6 +39,7 @@ p.stats(['SHIP', 'HULL', 'SHIELD', 'RAM DAMAGE'], [
 p.picks()
 
 p.css('''.stage { background: radial-gradient(80% 80% at 30% 40%, #120c24, #05040b 70%); }
+.stage.dock .berth { position: absolute; left: 520px; top: 250px; width: 400px; height: 400px; border-radius: 50%; border: 18px solid #3c6a8a; box-shadow: 0 0 60px rgba(62, 224, 255, .35), inset 0 0 40px rgba(62, 224, 255, .25); }
 .log { position: absolute; right: 24px; bottom: 40px; width: 260px; height: 200px; overflow: auto; margin: 0; padding: 8px 12px; list-style: none; background: rgba(8, 6, 18, .85); border: 1px solid var(--k-line); border-radius: 6px; font: 500 13px/22px var(--k-data); color: #cfe6ff; }''')
 # The player's draw runs once the kit has started, so the stage's canvas is sized by then.
 p.js('''const fx = document.getElementById('fx');

@@ -241,8 +241,8 @@ button.rchip { cursor: pointer; }
 .k-changed { box-shadow: 0 0 0 1px rgba(62, 224, 255, .45); }
 .k-new { box-shadow: 0 0 0 1px rgba(125, 255, 184, .5); }
 
-/* ---- phones (kit.js wirePhone): the first stage sits above the pickers and stays at the top while the
-   rest scrolls under it; typing lets it go. Every control is a full finger high, and text fields are
+/* ---- phones (kit.js wirePhone): each stage stays at the top while its own section scrolls under it,
+   until the next stage's section pushes it off; typing lets it go. Every control is a full finger high, and text fields are
    16px so the browser does not zoom the page when one takes focus. */
 .stagebox.scroll2 { overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 @media (max-width: 700px) {
